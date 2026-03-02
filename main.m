@@ -11,11 +11,11 @@ cfg = struct();
 
 %cfg.route_file        = 'Guangzhou_Line7.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS01_0.000-1.120km.mat';
-cfg.route_file        = 'Guangzhou_Line7_IS02_1.120-3.028km.mat';
+%cfg.route_file        = 'Guangzhou_Line7_IS02_1.120-3.028km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS03_3.028-5.200km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS04_5.200-6.842km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS05_6.842-8.958km.mat';
-%cfg.route_file        = 'Guangzhou_Line7_IS06_8.958-11.323km.mat';
+cfg.route_file        = 'Guangzhou_Line7_IS06_8.958-11.323km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS07_11.323-13.729km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS08_13.729-17.507km.mat';
 cfg.rollingstock_file = 'rollingstock_Guangzhou_L7_res_upd.m'; 
@@ -28,14 +28,14 @@ cfg.leave_one_core = false;    % true -> use (NumWorkers-1) to keep UI responsiv
 % Strategy switch (single-run mode)
 % - false => base (simulation_fun_CC_CR_base + decision_var_NO_base)
 % - true  => improved (simulation_fun_CC_CR_improved + decision_var_NO_improved)
-cfg.use_improved = false;
+cfg.use_improved = true;
 
 % Optim settings (default)
 cfg.pop_size   = 200;
 cfg.iterations = 300;
 
 % Run mode
-cfg.run_benchmark = false;      % true -> run benchmark, false -> run one optimizer
+cfg.run_benchmark = true;      % true -> run benchmark, false -> run one optimizer
 cfg.optimizer     = "nsga2";   % "nsga2" | "mopso" | "spea2" | "moead" (used when run_benchmark=false)
 
 % Benchmark settings (used when run_benchmark=true)
