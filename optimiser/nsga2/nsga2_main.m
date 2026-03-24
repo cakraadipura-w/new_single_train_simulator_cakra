@@ -50,6 +50,9 @@ function [pop, GD, SP, history] = nsga2_main(vel_profile)
         % 2. STRATIFIKASI POPULASI 
         % Urutkan berdasarkan Rank (Asc) lalu SDE (Desc -> nilai tinggi lebih baik)
         % =================================================================
+
+        
+
         idx_all = (1:N)';
         sort_table = sortrows([idx_all, popRank, popSDE], [2, -3]);
         sorted_indices = sort_table(:,1);

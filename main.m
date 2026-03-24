@@ -10,15 +10,16 @@ cfg = struct();
 %cfg.rollingstock_file = 'rollingstock_Xiau_liu2.m';  % change here to switch rollingstock
 
 %cfg.route_file        = 'Guangzhou_Line7.mat';
-%cfg.route_file        = 'Guangzhou_Line7_IS01_0.000-1.120km.mat';
+cfg.route_file        = 'Guangzhou_Line7_IS01_0.000-1.120km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS02_1.120-3.028km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS03_3.028-5.200km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS04_5.200-6.842km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS05_6.842-8.958km.mat';
-cfg.route_file        = 'Guangzhou_Line7_IS06_8.958-11.323km.mat';
+%cfg.route_file        = 'Guangzhou_Line7_IS06_8.958-11.323km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS07_11.323-13.729km.mat';
 %cfg.route_file        = 'Guangzhou_Line7_IS08_13.729-17.507km.mat';
-cfg.rollingstock_file = 'rollingstock_Guangzhou_L7_res_upd.m'; 
+cfg.rollingstock_file = 'rollingstock_Guangzhou_L7.m'; 
+%cfg.rollingstock_file = 'rollingstock_Guangzhou_L7_res_upd.m'; 
 cfg.driving_strategy  = "CC_CR";                      % "CC" | "CR" | "CC_CR"
 
 % Parallel
@@ -44,6 +45,9 @@ cfg.bench_solvers    = {'nsga2'};           % e.g. {'nsga2','mopso','spea2','moe
 cfg.bench_seeds      = 1:2;                % repeat count (stochastic)
 cfg.bench_strategies = {'base','improved'}; % compare both strategies in one benchmark
 cfg.make_plots       = true;               % plots: Pareto overlay + boxplots
+
+global time_obj_max
+time_obj_max = 250;   % batas Running time (objective) maksimal 250 detik
 
 % Fair budget helper:
 % If you keep cfg.iterations for NSGA-II, the default benchmark uses ~half iterations for others.

@@ -5,6 +5,8 @@ function evaluate = calculate_pop(pop)
 global parallel_use driving_strategy
 global show_progress
 
+global time_obj_max
+if isempty(time_obj_max), time_obj_max = inf; end
 
 % pilih simulator sekali (aman buat parfor)
 simfun = pick_simfun(driving_strategy);
@@ -39,6 +41,10 @@ if usePar
             if ~isfinite(t) || ~isfinite(e) || t<=0 || e<0 || t>1000
                 t = 1e6; e = 1e6;
             end
+            if t > time_obj_max
+                t = 1e6; e = 1e6;
+            end
+            
             fx1(i)=t; fx2(i)=e;
 
             if mod(i,20)==0 || i==n
