@@ -39,15 +39,19 @@ cfg.iterations = 300;
 cfg.run_benchmark = true;      % true -> run benchmark, false -> run one optimizer
 cfg.optimizer     = "nsga2";   % "nsga2" | "mopso" | "spea2" | "moead" (used when run_benchmark=false)
 
+% NSGA-II variant selection (used when optimizer is "nsga2")
+% Options: 'original' | 'rl_sde' | 'improved_regular' | 'bayes_rl'
+cfg.nsga2_variant = 'original';  % Default: RL+SDE hybrid (Wen+Zhang 2025)
+
 % Benchmark settings (used when run_benchmark=true)
 % NOTE: this will run EACH solver across EACH seed across EACH strategy.
 cfg.bench_solvers    = {'nsga2'};           % e.g. {'nsga2','mopso','spea2','moead'}
-cfg.bench_seeds      = 1:2;                % repeat count (stochastic)
+cfg.bench_seeds      = 1:1;                % repeat count (stochastic)
 cfg.bench_strategies = {'base','improved'}; % compare both strategies in one benchmark
 cfg.make_plots       = true;               % plots: Pareto overlay + boxplots
 
 global time_obj_max
-time_obj_max = 250;   % batas Running time (objective) maksimal 250 detik
+time_obj_max = 250;   % maximum running time (objective) limit: 250 seconds
 
 % Fair budget helper:
 % If you keep cfg.iterations for NSGA-II, the default benchmark uses ~half iterations for others.
@@ -81,10 +85,48 @@ cfg.project_root     = info.project_root;
 
 if cfg.run_benchmark
     results = run_benchmark_compare(cfg); %#ok<NASGU>
-    save('benchmark_results.mat','results');
-    disp('Saved benchmark_results.mat');
+    
+    % Generate smart filename: benchmark_results_<solver>_<variant>_<strategies>.mat
+    solvers = string(cfg.bench_solvers);
+    strategies = string(cfg.bench_strategies);
+    solver_str = char(solvers(1));  % typically just one solver in benchmark
+    strategy_str = strjoin(strategies, '-');  % 'base-improved'
+    
+    % Add variant info if nsga2
+    if strcmp(solver_str, 'nsga2')
+        variant_str = char(cfg.nsga2_variant);
+        benchmark_fname = sprintf('benchmark_results_%s_%s_%s.mat', ...
+            solver_str, variant_str, strategy_str);
+    else
+        benchmark_fname = sprintf('benchmark_results_%s_%s.mat', ...
+            solver_str, strategy_str);
+    end
+    
+    save(benchmark_fname, 'results');
+    fprintf('Saved: %s\n', benchmark_fname);
 else
     OUT = run_single(cfg); %#ok<NASGU>
-    save(sprintf('result_%s.mat', lower(string(cfg.optimizer))), 'OUT');
-    disp('Saved single-run result .mat');
+    
+    % Generate smart filename based on optimizer + variant + strategy
+    segment = extract_segment_name(cfg.route_file);
+    result_fname = sprintf('result_%s_%s_%s%s.mat', ...
+        OUT.optimizer, OUT.nsga2_variant, OUT.strategy, segment);
+    
+    save(result_fname, 'OUT');
+    fprintf('Saved: %s\n', result_fname);
+end
+
+% Helper: Extract segment name from route file
+function segment = extract_segment_name(route_file)
+    % Extract segment identifier (e.g., '_IS01' from 'Guangzhou_Line7_IS01_0.000-1.120km.mat')
+    if contains(route_file, 'IS')
+        match = regexp(route_file, '_IS\d+', 'match');
+        if ~isempty(match)
+            segment = match{1};  % e.g., '_IS01'
+        else
+            segment = '';
+        end
+    else
+        segment = '';
+    end
 end

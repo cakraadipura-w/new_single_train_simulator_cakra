@@ -27,7 +27,8 @@ function [allpop, GD, SP] = nsga2_main_improved_regular(vel_profile)
 
     % --- user toggles
     log_each = true;
-    plotDisplay = true;
+    global show_progress
+    plotDisplay = ~isempty(show_progress) && isscalar(show_progress) && logical(show_progress);
     plotEvery = 10;
 
     % --- bounds (gene-wise if var available; else generic) (km/h)
@@ -385,8 +386,8 @@ function bounds = build_bounds_from_var(vel_profile, var, dimension)
     % Optional: if you appended 2 accel-scaling genes [alpha_trac, alpha_brake] at the end
     % with dimension = sum(var)+2, set their bounds here:
     if sum(var)+2 == dimension
-        bounds(end-1,:) = [0.60, 1.00]; % alpha_trac
-        bounds(end  ,:) = [0.60, 1.00]; % alpha_brake
+        bounds(end-1,:) = [0.80, 1.00]; % alpha_trac
+        bounds(end  ,:) = [0.80, 1.00]; % alpha_brake
     end
 
 end

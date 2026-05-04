@@ -15,7 +15,7 @@ function [allpop, GD, SP] = nsga2_main_original(vel_profile)
 %     A dominates B if all(A<=B) && any(A<B)
 
     %#ok<*NASGU>
-    global pop_size iterations dimension
+    global pop_size iterations dimension llm_advisor_enabled
 
     if isempty(pop_size) || isempty(iterations) || isempty(dimension)
         error('Globals pop_size/iterations/dimension not set. Check setup_project.m.');
@@ -27,7 +27,8 @@ function [allpop, GD, SP] = nsga2_main_original(vel_profile)
 
     % --- user toggles
     log_each = true;
-    plotDisplay = true;
+    global show_progress
+    plotDisplay = ~isempty(show_progress) && isscalar(show_progress) && logical(show_progress);
     plotEvery = 10;
 
     % --- bounds (km/h)
@@ -35,9 +36,24 @@ function [allpop, GD, SP] = nsga2_main_original(vel_profile)
     lb = 20 * ones(1, dimension);
     ub = vmax * ones(1, dimension);
     bounds = [lb(:), ub(:)];
+    % Override alpha_trac / alpha_brake bounds when improved strategy adds them
+    global use_improved var
+    if ~isempty(use_improved) && logical(use_improved) && ~isempty(var) && sum(var)+2 == dimension
+        bounds(end-1,:) = [0.80, 1.00];
+        bounds(end  ,:) = [0.80, 1.00];
+    end
 
     % --- init population
     popX = rand_init(N, dimension, bounds);
+    % Smart init: inject physics-informed seeds for improved CC_CR (Config C)
+    if ~isempty(use_improved) && logical(use_improved)
+        frac = 0.25;
+        if ~isempty(llm_advisor_enabled) && logical(llm_advisor_enabled)
+            frac = 0.40;
+        end
+        n_smart = max(1, round(frac * N));
+        popX(1:n_smart, :) = smart_init_cccr(n_smart, bounds);
+    end
     popF = calculate_pop(popX);
 
     % --- rank+crowd

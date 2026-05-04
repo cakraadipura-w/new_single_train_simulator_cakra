@@ -16,7 +16,8 @@ function [allpop, GD, SP] = nsga2_main_bayes_RL(vel_profile)
     
     % --- User toggles
     log_each = true;
-    plotDisplay = true;
+    global show_progress
+    plotDisplay = ~isempty(show_progress) && isscalar(show_progress) && logical(show_progress);
     plotEvery = 10;
 
     % --- Bounds (km/h) - Menyesuaikan dengan batas kecepatan

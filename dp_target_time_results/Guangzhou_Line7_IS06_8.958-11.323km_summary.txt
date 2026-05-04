@@ -1,0 +1,16 @@
+=== RINGKASAN TARGET TIME | IS06 ===
+Route file            : Guangzhou_Line7_IS06_8.958-11.323km.mat
+T_sched               : 219.0 s
+Targets               : [219 220 221 222 223 ]
+Grid                  : dx=1.00 m | dv_req=0.30 m/s | dv_used=0.10 m/s | stages=2366 | speeds=243 | controls=12
+Distance              : 2365.0 m
+
+Target (s) | Match (s)  | Error (s)  | Energi (kWh) | Lambda     | Solve (s)  | Status  
+-----------------------------------------------------------------------------------------
+219.0      | 218.795    | -0.205     | 17.472       | 0.05680    | 44.27      | matched 
+220.0      | 219.692    | -0.308     | 17.412       | 0.05604    | 55.73      | matched 
+221.0      | 220.927    | -0.073     | 17.356       | 0.05527    | 50.12      | matched 
+222.0      | 221.669    | -0.331     | 17.320       | 0.05451    | 55.58      | matched 
+223.0      | 222.807    | -0.193     | 17.259       | 0.05375    | 21.93      | matched 
+-----------------------------------------------------------------------------------------
+Matched 5/5 | Avg |error| = 0.222 s | Total search wall time = 227.70 s | Avg solve = 45.53 s

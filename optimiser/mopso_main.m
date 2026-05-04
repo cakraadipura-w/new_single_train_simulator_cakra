@@ -5,7 +5,8 @@ function archive = mopso_main(vel_profile)
     global pop_size iterations dimension var
 
     log = true;
-    plotDisplay = true;
+    global show_progress
+    plotDisplay = ~isempty(show_progress) && isscalar(show_progress) && logical(show_progress);
     
     target = 2;
     

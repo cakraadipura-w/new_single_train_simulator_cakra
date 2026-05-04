@@ -23,8 +23,8 @@ global Max_tractive_power Max_brake_power
 global max_speed co_fric gravity max_traction max_brake
 global max_accel_trac max_accel_brake
 global parallel_use driving_strategy
-
 global use_improved
+global nsga2_variant
 
 % ================= BASIC CFG =================
 parallel_use     = logical(cfg.parallel_use);
@@ -37,6 +37,13 @@ if isfield(cfg,'use_improved')
     use_improved = logical(cfg.use_improved);
 else
     use_improved = false;
+end
+
+% NSGA-II variant selection
+if isfield(cfg,'nsga2_variant') && ~isempty(cfg.nsga2_variant)
+    nsga2_variant = lower(string(cfg.nsga2_variant));
+else
+    nsga2_variant = 'rl_sde'; % Default: RL+SDE hybrid
 end
 
 % ================= LOCATE FILES =================

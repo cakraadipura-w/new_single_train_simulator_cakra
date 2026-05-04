@@ -1,0 +1,70 @@
+Source file:
+route/Guangxhou_line_7/Guangzhou_Line7_IS01_0.000-1.120km.mat
+
+Variables:
+- gradient: 3x2 double
+- station_info: 2x2 double
+- terminal: 2x1 double
+- vel_profile: 2x2 double
+- meta: 7x2 cell
+
+meta:
+route_name = Guangzhou_Line7
+segment_index = 1
+station_index_start = 1
+station_index_end = 2
+abs_start_km = 0.0
+abs_end_km = 1.12
+segment_length_km = 1.12
+
+gradient:
+% columns: [distance_km, gradient_value]
+0.0000   -2.7000
+1.0340    2.0000
+1.1200    2.0000
+
+station_info:
+% columns as stored in MAT file
+0.0000    0.0000
+1.1200    0.0000
+
+terminal:
+0
+0
+
+vel_profile:
+% columns: [distance_km, speed_limit_km_per_h]
+0.0000    80.0000
+1.1200    80.0000
+
+Paste-ready MATLAB struct:
+route_data = struct();
+route_data.meta = struct( ...
+    'route_name', 'Guangzhou_Line7', ...
+    'segment_index', 1, ...
+    'station_index_start', 1, ...
+    'station_index_end', 2, ...
+    'abs_start_km', 0.0, ...
+    'abs_end_km', 1.12, ...
+    'segment_length_km', 1.12);
+route_data.gradient = [0.0000 -2.7000; 1.0340 2.0000; 1.1200 2.0000];
+route_data.station_info = [0.0000 0.0000; 1.1200 0.0000];
+route_data.terminal = [0; 0];
+route_data.vel_profile = [0.0000 80.0000; 1.1200 80.0000];
+
+Paste-ready JSON-like:
+{
+  "meta": {
+    "route_name": "Guangzhou_Line7",
+    "segment_index": 1,
+    "station_index_start": 1,
+    "station_index_end": 2,
+    "abs_start_km": 0.0,
+    "abs_end_km": 1.12,
+    "segment_length_km": 1.12
+  },
+  "gradient": [[0.0, -2.7], [1.034, 2.0], [1.12, 2.0]],
+  "station_info": [[0.0, 0.0], [1.12, 0.0]],
+  "terminal": [0, 0],
+  "vel_profile": [[0.0, 80.0], [1.12, 80.0]]
+}

@@ -66,7 +66,13 @@ function init_worker_globals(routePath, rollingstockPath, sim_in, use_improved_i
     % ---------- sync var/dimension via dispatcher ----------
     var = zeros(1, length(vel_profile)-1);
     decision_var_NO;
-    dimension = sum(var);
+    if logical(use_improved)
+        % Gradient-adaptive MID: improved CC_CR downhill sections (var=3) use only 2 DVs.
+        % MID is computed from gradient inside the simulator, not a decision variable.
+        dimension = sum(min(var, 2));
+    else
+        dimension = sum(var);
+    end
 
     fprintf('[WORKER INIT] use_improved=%d | strategy=%s | dim=%d\n', ...
         use_improved, upper(string(driving_strategy)), dimension);

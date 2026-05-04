@@ -10,7 +10,8 @@ function [pop, front1, hist] = moead_main(vel_profile)
     target = 2;
 
     log = false;
-    plotDisplay = true;
+    global show_progress
+    plotDisplay = ~isempty(show_progress) && isscalar(show_progress) && logical(show_progress);
     
     % ----- bounds (same as nsga2_main) -----
     lb = 20 + zeros(1,dimension);

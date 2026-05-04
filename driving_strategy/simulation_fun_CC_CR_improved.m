@@ -4,35 +4,42 @@
 % function [running_inter] = simulation_fun(X)
 %function [running_inter,Total_E]= simulation_fun(X)
 function [running_inter, Total_E, s_out, v_out, vlim_out] = simulation_fun_CC_CR_improved(X)
-%UNTITLED2 此处显示有关此函数的摘要
-%   此处显示详细说明
-% X=[40	80	80	70	55	20	62.02515365	63.77600229];
-% Single-train simulation
-% global vel_profile;%线路限速
-% global station_info;%车站数据
-% global gradient;%坡度
-% global terminal;
-% X=[40,80,80,67.7415,55,45.3878,73.385,54.8161];
-% decision_var_NO;
-global var;
-global vel_profile;%线路限速
-global station_info;%车站数据
-global gradient;%坡度
-global terminal;
-%% rolling stock parameters
-%global Mass; %Mass of the rolling stock
-global lambda;
-global inertial_mass;
-global Davis;
-%%V_traction and V_brake are all derived from the railway company
-global V1_traction;%m/s,this is calculated by (3144/289)*3.6
-global V2_traction;%m/s,this is estimated by Fig.5
-%global V3_traction;%m/s,traction power decreases in the speed of 1/V until the vehicle reaches base speed
-global V1_brake;%m/s,braking effort is maintained until the vehicle reaches V1
-global V2_brake;%m/s,max braking power is maintained untile the vehicle reaches V2
-%global V3_brake;%m/s,braking power decreases in the speed of 1/V until the vehicle reaches base speed
-global Max_tractive_power; %max tractive power is 3144 (kw), without multiplying the engine efficiency(can be proved by Fig 5) 
-global Max_brake_power; %max braking power (w) 
+% Improved driving strategy simulator for CC-CR (Cruise-Coasting-Cruise) mode
+% Enhanced version with adaptive acceleration/braking scaling parameters
+%
+% Inputs:
+%   X = decision variables with optional adaptive END parameters:
+%       [...base_decision_vars..., alpha_trac, alpha_brake]
+%   alpha_trac:  acceleration scaling factor [0.5-1.0] (default 1.0)
+%   alpha_brake: braking scaling factor [0.5-1.0] (default 1.0)
+%
+% Returns:
+%   running_inter: running time for each inter-station (seconds)
+%   Total_E: total energy consumption (kWh)
+%   s_out, v_out, vlim_out: diagnostic output arrays
+
+global var;           % decision variable indices per section
+global vel_profile;   % speed profile (distance vs speed limit) from route
+global station_info;  % station location and dwell time data
+global gradient;      % gradient (%) along route
+global terminal;      % terminal station info
+%% Rolling stock parameters
+% global Mass; % Mass of the rolling stock (kg)
+global lambda;          % rotational mass coefficient
+global inertial_mass;   % inertial mass equivalent (kg)
+global Davis;           % Davis running resistance coefficients
+
+%% Traction and braking characteristics (railway company-specific)
+global V1_traction;     % speed transition 1 for traction (m/s): constant force until V1
+global V2_traction;     % speed transition 2 for traction (m/s): constant power region
+% global V3_traction;   % speed transition 3 for traction (m/s): power decreases as 1/V
+
+global V1_brake;        % speed transition 1 for braking (m/s): constant effort until V1
+global V2_brake;        % speed transition 2 for braking (m/s): constant power region
+% global V3_brake;      % speed transition 3 for braking (m/s): power decreases as 1/V
+
+global Max_tractive_power;  % maximum tractive power (kW): 3144 kW
+global Max_brake_power;     % maximum braking power (W) 
 global max_speed;
 %global co_fric;
 %global gravity;
@@ -42,16 +49,16 @@ global max_speed;
 global max_accel_trac;%m/s2
 global max_accel_brake;%m/s2
 
-%% ===== Optional adaptive acceleration scaling (alpha_trac, alpha_brake) =====
-% If X has 2 extra scalars at the end: [ ... base decision vars ..., alpha_trac, alpha_brake ]
-% alpha in [0.5, 1.0]. Otherwise defaults to 1.
+%% ===== Adaptive acceleration/braking scaling (optional END parameters) =====
+% If X has 2 extra scalars: [...base_decision_vars..., alpha_trac, alpha_brake]
+% alpha values range [0.5, 1.0]. Otherwise defaults to 1.0
 alpha_trac = 1.0;
 alpha_brake = 1.0;
 try
     nXexp = sum(var);
     if numel(X) == nXexp + 2
-        alpha_trac  = min(max(X(end-1), 0.5), 1.0);
-        alpha_brake = min(max(X(end  ), 0.5), 1.0);
+        alpha_trac  = min(max(X(end-1), 0.8), 1.0);
+        alpha_brake = min(max(X(end  ), 0.8), 1.0);
         X = X(1:end-2);
     end
 catch
@@ -59,55 +66,39 @@ end
 
 % var=[1,3,1,3];
 
-%% input driving controls
-% dwellset=zeros(1,size(station_info,1)-2);          %no dwell time for first and last station
-maxspeedset=zeros(1,size(station_info,1)-1);       %Maximum speed
-%coasting_low=zeros(1,size(station_info,1)-1);      %the lower coasting speed
-accrate_fixset=zeros(1,size(station_info,1)-1);    %Maximum acceleration rate
-brakerate_fixset=zeros(1,size(station_info,1)-1);  %Maximum braking rate
-kdset=zeros(1,size(station_info,1)-1);             %kd, when train_control=2/3
-train_controlset=zeros(1,size(station_info,1)-1);  %kd, when train_control=2/3
+%% Input driving control parameters
+% dwellset = zeros(1, size(station_info,1)-2);      % dwell time (not used for continuous lines)
+maxspeedset     = zeros(1, size(station_info,1)-1);      % maximum speed per inter-station (m/s)
+% coasting_low  = zeros(1, size(station_info,1)-1);      % lower coasting speed threshold
+accrate_fixset  = zeros(1, size(station_info,1)-1);      % maximum acceleration rate (m/s²)
+brakerate_fixset= zeros(1, size(station_info,1)-1);      % maximum braking rate (m/s²)
+kdset           = zeros(1, size(station_info,1)-1);      % kd parameter for control modes 2/3
+train_controlset= zeros(1, size(station_info,1)-1);      % train control mode per section
 
-%% sectioning accroding to speed limits. Variables definition and steep downhill
-%initialise the value of decision variables for every speed limit section
-cst_high=zeros(1,length(vel_profile)-1);%the higher bound of coasting remotoring
-cst_low1=zeros(1,length(vel_profile)-1);%the first lower bound of coasting remotoring
-cst_low2=zeros(1,length(vel_profile)-1);%the second lower bound of coasting remotoring
-cruising=zeros(1,length(vel_profile)-1);%the cruising speed of cruising coasting mode
-coasting=zeros(1,length(vel_profile)-1);%the coasting speed of cruising coasting mode
+%% Section-wise decision variable initialization (by speed limit segment)
+% Initialize coasting and cruising speed thresholds for each speed-limit section
+cst_high = zeros(1, length(vel_profile)-1);  % upper coasting threshold
+cst_low1 = zeros(1, length(vel_profile)-1);  % lower coasting threshold 1
+cst_low2 = zeros(1, length(vel_profile)-1);  % lower coasting threshold 2
+cruising = zeros(1, length(vel_profile)-1);  % target cruising speed (CC mode)
+coasting = zeros(1, length(vel_profile)-1);  % target coasting speed (CR mode)
 
 %fprintf('call from simulation file : [%s]\n', num2str(var));
 
 for i=1:length(var)
+    idx = sum(min(var(1:(i-1)), 2));  % effective DV offset: var=3 counts as 2
     switch var(i)
         case 1
-            if i==1
-                cst_high(i)=X(i)/3.6;
-            else
-                cst_high(i)=X(sum(var(1:(i-1)))+1)/3.6;
-            end
-            % keep semantics consistent: single-variable section => fixed speed threshold
-            cst_low1(i)=cst_high(i);
-            cst_low2(i)=cst_high(i);
+            cst_high(i) = X(idx+1)/3.6;
+            cst_low1(i) = cst_high(i);
+            cst_low2(i) = cst_high(i);
         case 2
-            if i==1
-                cruising(i)=X(1)/3.6;
-                coasting(i)=X(2)/3.6;
-            else
-                cruising(i)=X(sum(var(1:(i-1)))+1)/3.6;
-                coasting(i)=X(sum(var(1:(i-1)))+2)/3.6;
-            end
+            cruising(i) = X(idx+1)/3.6;
+            coasting(i) = X(idx+2)/3.6;
         case 3
-            if i==1
-                cst_high(i)=X(1)/3.6;
-                cst_low1(i)=X(2)/3.6;
-                cst_low2(i)=X(3)/3.6;
-            else
-                cst_high(i)=X(sum(var(1:(i-1)))+1)/3.6;
-                cst_low1(i)=X(sum(var(1:(i-1)))+2)/3.6;
-                cst_low2(i)=X(sum(var(1:(i-1)))+3)/3.6;
-            end
-            
+            cst_high(i)  = X(idx+1)/3.6;
+            cst_low1(i)  = X(idx+2)/3.6;
+            cst_low2(i)  = cst_low1(i);  % fallback for backward sim; MID overridden adaptively in forward sim
     end
 end
 % % up-direction
@@ -258,10 +249,21 @@ end
 
 %FORWARD VELOCITY CALCULATION
 velF=zeros(1,Size)+0.01;
-%%
+
+% Precompute gradient-adaptive MID per section (avoids interp1 inside hot loop)
+mid_adaptive = cst_low2;
+for si = 1:length(var)
+    if var(si) == 3
+        sec_mid_km = (vel_profile(si,1) + vel_profile(si+1,1)) / 2;
+        local_g = interp1(gradient(:,1), gradient(:,2), sec_mid_km, 'linear', 'extrap');
+        steepness = min(max(0, -local_g) / 10, 1.0);
+        H = cst_high(si); L = cst_low1(si);
+        mid_adaptive(si) = max(H - steepness * (H - L) * 0.5, L);
+    end
+end
 
 Traction_power_forward=zeros(1,Size);
-coast_start_flag=0; 
+coast_start_flag=0;
 %%
 for i=1:(Size-1)
     Resistance=(Davis(1)+Davis(2)*velF(1,i)+Davis(3)*(velF(1,i))^2)/inertial_mass;
@@ -282,7 +284,7 @@ for i=1:(Size-1)
             %coast bounds changing
             LOW1=cst_low1(SPDLi);%the first lower bound of coasting-remotoring at this speed limit section
             HIGH=cst_high(SPDLi);%the higher bound of coasting-remotoring at this speed limit section
-            MID=cst_low2(SPDLi);% speed (m/s): early-coast trigger AND backward coasting speed
+            MID=mid_adaptive(SPDLi);% precomputed: gradient-adaptive for var=3, cst_low2 otherwise
             break;
         end
     end

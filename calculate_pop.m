@@ -8,7 +8,7 @@ global show_progress
 global time_obj_max
 if isempty(time_obj_max), time_obj_max = inf; end
 
-% pilih simulator sekali (aman buat parfor)
+% select simulator once (safe for parfor)
 simfun = pick_simfun(driving_strategy);
 
 n   = size(pop,1);
@@ -18,7 +18,7 @@ fx1 = zeros(n,1);
 fx2 = zeros(n,1);
 
 pool   = gcp('nocreate');
-usePar = logical(parallel_use) && ~isempty(pool);
+usePar = ~isempty(parallel_use) && isscalar(parallel_use) && logical(parallel_use) && ~isempty(pool);
 
 doLog = false;
 if exist('show_progress','var') && ~isempty(show_progress)

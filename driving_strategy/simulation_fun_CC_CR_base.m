@@ -4,35 +4,37 @@
 % function [running_inter] = simulation_fun(X)
 %function [running_inter,Total_E]= simulation_fun(X)
 function [running_inter, Total_E, s_out, v_out, vlim_out] = simulation_fun_CC_CR_base(X)
-%UNTITLED2 此处显示有关此函数的摘要
-%   此处显示详细说明
-% X=[40	80	80	70	55	20	62.02515365	63.77600229];
-% Single-train simulation
-% global vel_profile;%线路限速
-% global station_info;%车站数据
-% global gradient;%坡度
-% global terminal;
-% X=[40,80,80,67.7415,55,45.3878,73.385,54.8161];
-% decision_var_NO;
-global var;
-global vel_profile;%线路限速
-global station_info;%车站数据
-global gradient;%坡度
-global terminal;
-%% rolling stock parameters
-%global Mass; %Mass of the rolling stock
-global lambda;
-global inertial_mass;
-global Davis;
-%%V_traction and V_brake are all derived from the railway company
-global V1_traction;%m/s,this is calculated by (3144/289)*3.6
-global V2_traction;%m/s,this is estimated by Fig.5
-%global V3_traction;%m/s,traction power decreases in the speed of 1/V until the vehicle reaches base speed
-global V1_brake;%m/s,braking effort is maintained until the vehicle reaches V1
-global V2_brake;%m/s,max braking power is maintained untile the vehicle reaches V2
-%global V3_brake;%m/s,braking power decreases in the speed of 1/V until the vehicle reaches base speed
-global Max_tractive_power; %max tractive power is 3144 (kw), without multiplying the engine efficiency(can be proved by Fig 5) 
-global Max_brake_power; %max braking power (w) 
+% Base driving strategy simulator for CC-CR (Cruise-Coasting-Cruise) mode
+% Simulates train acceleration, cruising, coasting, and braking phases
+% X = decision variable vector containing speed thresholds for each section
+%
+% Returns:
+%   running_inter: running time for each inter-station section (seconds)
+%   Total_E: total energy consumption (kWh)
+%   s_out, v_out, vlim_out: diagnostic output arrays (distance, velocity, speed limit)
+
+global var;           % decision variable indices per section
+global vel_profile;   % speed profile (distance vs speed limit) from route
+global station_info;  % station location and dwell time data
+global gradient;      % gradient (%) along route
+global terminal;      % terminal station info
+%% Rolling stock parameters
+% global Mass; % Mass of the rolling stock (kg)
+global lambda;          % rotational mass coefficient
+global inertial_mass;   % inertial mass equivalent (kg)
+global Davis;           % Davis running resistance coefficients
+
+%% Traction and braking characteristics (railway company-specific)
+global V1_traction;     % speed transition 1 for traction (m/s): constant force until V1
+global V2_traction;     % speed transition 2 for traction (m/s): constant power region
+% global V3_traction;   % speed transition 3 for traction (m/s): power decreases as 1/V
+
+global V1_brake;        % speed transition 1 for braking (m/s): constant effort until V1
+global V2_brake;        % speed transition 2 for braking (m/s): constant power region
+% global V3_brake;      % speed transition 3 for braking (m/s): power decreases as 1/V
+
+global Max_tractive_power;  % maximum tractive power (kW): 3144 kW
+global Max_brake_power;     % maximum braking power (W) 
 global max_speed;
 %global co_fric;
 %global gravity;
@@ -44,22 +46,22 @@ global max_accel_brake;%m/s2
 
 % var=[1,3,1,3];
 
-%% input driving controls
-dwellset=zeros(1,size(station_info,1)-2);          %no dwell time for first and last station
-maxspeedset=zeros(1,size(station_info,1)-1);       %Maximum speed
-%coasting_low=zeros(1,size(station_info,1)-1);      %the lower coasting speed
-accrate_fixset=zeros(1,size(station_info,1)-1);    %Maximum acceleration rate
-brakerate_fixset=zeros(1,size(station_info,1)-1);  %Maximum braking rate
-kdset=zeros(1,size(station_info,1)-1);             %kd, when train_control=2/3
-train_controlset=zeros(1,size(station_info,1)-1);  %kd, when train_control=2/3
+%% Input driving control parameters
+dwellset        = zeros(1, size(station_info,1)-2);      % dwell time at stations (no dwell at first/last)
+maxspeedset     = zeros(1, size(station_info,1)-1);      % maximum speed per inter-station (m/s)
+% coasting_low  = zeros(1, size(station_info,1)-1);      % lower coasting speed threshold
+accrate_fixset  = zeros(1, size(station_info,1)-1);      % maximum acceleration rate (m/s²)
+brakerate_fixset= zeros(1, size(station_info,1)-1);      % maximum braking rate (m/s²)
+kdset           = zeros(1, size(station_info,1)-1);      % kd parameter for control modes 2/3
+train_controlset= zeros(1, size(station_info,1)-1);      % train control mode per section
 
-%% sectioning accroding to speed limits. Variables definition and steep downhill
-%initialise the value of decision variables for every speed limit section
-cst_high=zeros(1,length(vel_profile)-1);%the higher bound of coasting remotoring
-cst_low1=zeros(1,length(vel_profile)-1);%the first lower bound of coasting remotoring
-cst_low2=zeros(1,length(vel_profile)-1);%the second lower bound of coasting remotoring
-cruising=zeros(1,length(vel_profile)-1);%the cruising speed of cruising coasting mode
-coasting=zeros(1,length(vel_profile)-1);%the coasting speed of cruising coasting mode
+%% Section-wise decision variable initialization (by speed limit segment)
+% Initialize coasting and cruising speed thresholds for each speed-limit section
+cst_high = zeros(1, length(vel_profile)-1);  % upper coasting threshold
+cst_low1 = zeros(1, length(vel_profile)-1);  % lower coasting threshold 1
+cst_low2 = zeros(1, length(vel_profile)-1);  % lower coasting threshold 2
+cruising = zeros(1, length(vel_profile)-1);  % target cruising speed (CC mode)
+coasting = zeros(1, length(vel_profile)-1);  % target coasting speed (CR mode)
 
 %fprintf('call from simulation file : [%s]\n', num2str(var));
 

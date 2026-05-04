@@ -1,0 +1,19 @@
+Experiment E5 — LLM Advisor Study
+Segment: IS04 | T_target=180 s | E_baseline=67.0976 kWh
+Pop=300 | Gen=300 | Runs=10 | Workers=4
+Response file: C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiments\..\experiment_results\IS04\E5_llm_response.json
+
+Config         HV_mean    HV_std  IGD_mean   Feas_mean   EnSav_pct
+A               1.1137    0.0004    0.0042       0.691       74.77
+B               1.1027    0.0052    0.0246       0.933       74.34
+C               1.0984    0.0004    0.0040       0.882       74.74
+D               1.1183    0.0189    0.0108       0.921       74.69
+C_LLM           1.0984    0.0003    0.0058       0.899       74.74
+D_LLM           1.1083    0.0145    0.0115       0.931       74.68
+
+Wilcoxon signed-rank test (HV, paired seeds) — D_LLM vs others:
+  D_LLM vs A      : p = 0.4316
+  D_LLM vs B      : p = 0.3750
+  D_LLM vs C      : p = 0.0098  *
+  D_LLM vs D      : p = 0.3750
+  D_LLM vs C_LLM  : p = 0.0098  *

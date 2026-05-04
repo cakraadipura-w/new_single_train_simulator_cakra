@@ -1,0 +1,30 @@
+Experiment E1 — Ablation Study
+Segment: IS08 | T_target=330 s | E_baseline=168.6320 kWh
+Pop=2 | Gen=3 | Runs=1 | Workers=4
+
+Config                                          HV_mean    HV_std  IGD_mean   Feas_mean   EnSav_pct
+A: Original CC_CR + Original NSGA-II             0.6392    0.0000    0.2774       0.500       66.30
+B: Original CC_CR + BRL-SDE-NSGA-II              0.7277    0.0000    0.2733       0.000         NaN
+C: Improved CC_CR + Original NSGA-II             0.6873    0.0000    0.2426       1.000       74.35
+D: Improved CC_CR + BRL-SDE-NSGA-II              0.1100    0.0000    0.6458       0.500       67.44
+
+Relative HV contributions:
+  Strategy : +7.53%
+  Solver   : +13.85%
+  Interact : -104.16%
+
+Wilcoxon signed-rank test (HV, paired — same seeds):
+  [A] Original CC_CR + Original NSGA-II
+    vs [D] Improved CC_CR + BRL-SDE-NSGA-II
+    p = NaN
+  [A] Original CC_CR + Original NSGA-II
+    vs [B] Original CC_CR + BRL-SDE-NSGA-II
+    p = NaN
+  [A] Original CC_CR + Original NSGA-II
+    vs [C] Improved CC_CR + Original NSGA-II
+    p = NaN
+
+Energy saving comparison:
+  A vs C (Strategy effect): 66.30% vs 74.35% (diff=8.05%)
+  A vs B (Solver effect): 66.30% vs NaN% (diff=NaN%)
+  A vs D (Combined effect): 66.30% vs 67.44% (diff=1.14%)

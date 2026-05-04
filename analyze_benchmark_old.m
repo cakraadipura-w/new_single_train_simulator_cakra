@@ -15,7 +15,7 @@ if nargin < 3 || isempty(T_window), T_window = [150 200]; end
 if nargin < 4 || isempty(ngrid),   ngrid   = 200; end
 
 if ~isfile(matfile)
-    error('File tidak ketemu: %s (cek Current Folder / path)', matfile);
+    error('File not found: %s (check Current Folder / path)', matfile);
 end
 
 S = load(matfile,'results');

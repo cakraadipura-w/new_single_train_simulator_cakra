@@ -21,7 +21,8 @@ function R = analyze_cccr_benchmark_full(matfile, solver, T_window, ngrid)
 %if nargin < 1 || isempty(matfile), matfile = 'benchmark_results_exp_1_IS3_nsga2_improved_DSbase-vsDSV1.mat'; end
 %if nargin < 1 || isempty(matfile), matfile = 'benchmark_results_exp_1_IS4_nsga2_improved_DSbase-vsDSV1.mat'; end
 %if nargin < 1 || isempty(matfile), matfile = 'benchmark_results_exp_1_IS5_nsga2_improved_DSbase-vsDSV1.mat'; end
-if nargin < 1 || isempty(matfile), matfile = 'IS_8_result.mat'; end
+if nargin < 1 || isempty(matfile), matfile = 'IS_1_result.mat'; end
+%if nargin < 1 || isempty(matfile), matfile = 'benchmark_results_nsga2_original_base-improved.mat'; end
 
 if nargin < 2 || isempty(solver), solver = 'nsga2'; end
 if nargin < 3, T_window = []; end
@@ -33,6 +34,37 @@ end
 
 S = load(matfile, 'results');
 runs = S.results;
+
+% Initialize global dimension for get_F_from_run (needed for Bug #1 fix)
+global dimension
+if isempty(dimension) || dimension == 0
+    % Extract from first run's AllF or AllX if available
+    if ~isempty(runs) && isfield(runs(1), 'dim')
+        dimension = runs(1).dim;
+    elseif ~isempty(runs) && isfield(runs(1), 'AllX')
+        dimension = size(runs(1).AllX, 2);
+    else
+        % Fallback: assume standard 2D decision variable
+        dimension = 2;
+    end
+end
+
+% Extract NSGA2 variant from filename or results struct
+nsga2_variant = '';
+if contains(matfile, 'nsga2_')
+    % Extract from filename: benchmark_results_nsga2_VARIANT_...
+    match = regexp(matfile, 'nsga2_(\w+)', 'tokens');
+    if ~isempty(match)
+        nsga2_variant = match{1}{1};  % e.g., 'original', 'rl_sde', 'improved_regular', 'bayes_rl'
+    end
+end
+% Fallback: check if stored in first run
+if isempty(nsga2_variant) && ~isempty(runs) && isfield(runs(1), 'nsga2_variant')
+    nsga2_variant = runs(1).nsga2_variant;
+end
+if isempty(nsga2_variant)
+    nsga2_variant = 'unknown';
+end
 
 % ---------------- filter solver ----------------
 if ~isstruct(runs) || isempty(runs)
@@ -129,6 +161,13 @@ Ei_mean = nanmean_local(EiMat, 1);
 [HVi, IGDi, haveStoredI] = extract_HV_IGD(runs(isImp));
 needEstimate = ~(haveStoredB && haveStoredI);
 
+% BUG FIX #4: Note about HV normalization for cross-IS comparison
+if haveStoredB && haveStoredI
+    % HV/IGD stored during benchmark are normalized per-run against union PF
+    % Therefore NOT directly comparable across different IS segments
+    % (each segment has different PF reference)
+end
+
 if needEstimate
     % Estimate HV/IGD from fronts (normalized by union Pareto)
     Fall = collect_all_F(runs);
@@ -138,11 +177,11 @@ if needEstimate
 end
 
 % ---------------- plots ----------------
-plot_pareto(Fb_nd_all, Fi_nd_all, solver);
-plot_saving_curve_union(tgrid, meanSav, stdSav, solver);     % Option 1
-plot_deadline_envelopes(tgrid, Eb_mean, Ei_mean, solver);    % Option 2
-plot_box_metric(HVb, HVi, 'HV - Hyper Volume  (higher is better)', solver, needEstimate);
-plot_box_metric(IGDb, IGDi, 'IGD - Inverted Generational Distance (lower is better)', solver, needEstimate);
+plot_pareto(Fb_nd_all, Fi_nd_all, solver, nsga2_variant);
+plot_saving_curve_union(tgrid, meanSav, stdSav, solver, nsga2_variant);     % Option 1
+plot_deadline_envelopes(tgrid, Eb_mean, Ei_mean, solver, nsga2_variant);    % Option 2
+plot_box_metric(HVb, HVi, 'HV - Hyper Volume  (higher is better)', solver, needEstimate, nsga2_variant);
+plot_box_metric(IGDb, IGDi, 'IGD - Inverted Generational Distance (lower is better)', solver, needEstimate, nsga2_variant);
 
 % ---------------- report ----------------
 R = struct();
@@ -155,6 +194,10 @@ R.minSaving_over_grid  = min(meanSav(~isnan(meanSav)));
 R.maxSaving_over_grid  = max(meanSav(~isnan(meanSav)));
 R.domRate_mean = nanmean_local(domRate, 1);
 R.domRate_std  = nanstd_local(domRate, 0, 1);
+
+% Store Pareto fronts for analysis scripts (needed for batch analysis)
+R.F_b_union = Fb_nd_all;
+R.F_i_union = Fi_nd_all;
 
 fprintf('\n=== CCCR saving report | solver=%s ===\n', solver);
 fprintf('Time axis shown (union): [%.2f, %.2f] s\n', tmin_union, tmax_union);
@@ -195,7 +238,7 @@ end
 end
 
 function F = get_F_from_run(run)
-% Try multiple common fields, then fallback to last 2 cols of population.
+% Try multiple common fields, then fallback to extract [T,E] from population.
 cand = {'F','front','pareto','PF','paretoF','F_nd','F_pareto'};
 F = [];
 
@@ -206,7 +249,7 @@ for i = 1:numel(cand)
     end
 end
 
-% fallback: if run contains "pop" (N x (D+4)) use last 2 cols as objectives
+% fallback: if run contains "pop" (N x (D+4)) extract [T,E] correctly
 if isempty(F)
     if isfield(run,'pop')
         F = run.pop;
@@ -225,11 +268,29 @@ nc = size(F,2);
 if nc == 2
     % already [T E] (or [E T])
 elseif nc > 2
-    F = F(:, (nc-1):nc);
+    % BUG FIX #1: Extract [T,E] CORRECTLY, not last 2 cols (which are rank/SDE)
+    global dimension
+    if ~isempty(dimension) && dimension > 0 && nc >= dimension + 2
+        % Standard format: [X1...Xd | T | E | rank | SDE/crowd]
+        F = F(:, dimension+1 : dimension+2);  % Extract T, E
+    else
+        % Fallback: assume [X... | T | E | rank | SDE]
+        F = F(:, (nc-3):(nc-2));  % 2 cols before last 2
+    end
 else
     F = [];
     return;
 end
+
+% BUG FIX #2: Filter penalized solutions BEFORE column swap check
+% (penalti solutions like T=1e6, E=1e6 cause axis scaling to zoom out)
+MAX_T_REASONABLE = 1e5;  % threshold for penalized solutions
+MAX_E_REASONABLE = 1e5;
+valid = F(:,1) > 0 & F(:,1) < MAX_T_REASONABLE & ...
+        F(:,2) >= 0 & F(:,2) < MAX_E_REASONABLE & ...
+        all(isfinite(F), 2) & all(isreal(F), 2);
+F = F(valid, :);
+if isempty(F), return; end
 
 % If columns are swapped (rare), try to detect and fix:
 % Typical: Time ~ 50..400 s, Energy ~ 0..50 kWh
@@ -293,18 +354,44 @@ end
 rate = mean(dom);
 end
 
-function plot_pareto(Fb, Fi, solver)
-    figure('Name', sprintf('Pareto (%s)', solver));
-    scatter(Fb(:,1), Fb(:,2), 24, 'filled'); hold on;
-    scatter(Fi(:,1), Fi(:,2), 24, 'filled');
+function plot_pareto(Fb, Fi, solver, variant)
+    if nargin < 4, variant = ''; end
+    variantStr = '';
+    if ~isempty(variant) && ~strcmp(variant, 'unknown')
+        variantStr = sprintf(' [%s]', variant);
+    end
+    
+    figure('Name', sprintf('Pareto (%s%s)', solver, variantStr));
+    scatter(Fb(:,1), Fb(:,2), 28, [0.2 0.4 0.8], 'filled', ...
+            'MarkerFaceAlpha', 0.5, 'DisplayName', 'base CC-CR');
+    hold on;
+    scatter(Fi(:,1), Fi(:,2), 20, [0.9 0.2 0.2], 'filled', ...
+            'MarkerFaceAlpha', 0.5, 'DisplayName', 'improved CC-CR');
     grid on;
     xlabel('Time T (s)'); ylabel('Energy E (kWh)');
-    title(sprintf('Pareto Front Comparison | %s', solver));
-    legend('base(CC-CR)','improved (CC-CR)','Location','best');
+    title(sprintf('Pareto Front | %s%s | base=%d pts, imp=%d pts', ...
+          solver, variantStr, size(Fb,1), size(Fi,1)));
+    legend('Location','best');
+
+    % Check if identical — size-safe comparison
+    isIdentical = isequal(Fb, Fi);
+    if ~isIdentical && isequal(size(Fb), size(Fi))
+        isIdentical = max(max(abs(Fb - Fi))) < 1e-6;
+    end
+    if isIdentical
+        text(0.05, 0.95, 'Note: base = improved (identical)', ...
+             'Units','normalized', 'Color','red', 'FontSize',9);
+    end
 end
 
-function plot_saving_curve_union(tgrid, meanSav, stdSav, solver)
-    figure('Name', sprintf('Saving vs deadline (%s)', solver));
+function plot_saving_curve_union(tgrid, meanSav, stdSav, solver, variant)
+    if nargin < 5, variant = ''; end
+    variantStr = '';
+    if ~isempty(variant) && ~strcmp(variant, 'unknown')
+        variantStr = sprintf(' [%s]', variant);
+    end
+    
+    figure('Name', sprintf('Saving vs deadline (%s%s)', solver, variantStr));
     plot(tgrid, meanSav, 'LineWidth', 1.8); hold on;
     plot(tgrid, meanSav+stdSav, '--', 'LineWidth', 1.0);
     plot(tgrid, meanSav-stdSav, '--', 'LineWidth', 1.0);
@@ -312,28 +399,40 @@ function plot_saving_curve_union(tgrid, meanSav, stdSav, solver)
     grid on;
     xlabel('Deadline T_{max} (s) (union axis)');
     ylabel('Saving (%) = (E_{base}-E_{imp})/E_{base} * 100');
-    title(sprintf('Option 1: Energy Saving vs Deadline | %s', solver));
+    title(sprintf('Option 1: Energy Saving vs Deadline | %s%s', solver, variantStr));
     legend('mean','mean+std','mean-std','0% line','Location','best');
 end
 
-function plot_deadline_envelopes(tgrid, Eb_mean, Ei_mean, solver)
-    figure('Name', sprintf('Deadline-energy envelopes (%s)', solver));
+function plot_deadline_envelopes(tgrid, Eb_mean, Ei_mean, solver, variant)
+    if nargin < 5, variant = ''; end
+    variantStr = '';
+    if ~isempty(variant) && ~strcmp(variant, 'unknown')
+        variantStr = sprintf(' [%s]', variant);
+    end
+    
+    figure('Name', sprintf('Deadline-energy envelopes (%s%s)', solver, variantStr));
     plot(tgrid, Eb_mean, 'LineWidth', 1.8); hold on;
     plot(tgrid, Ei_mean, 'LineWidth', 1.8);
     grid on;
     xlabel('Deadline T_{max} (s) (union axis)');
     ylabel('Min energy achievable (kWh) with T \le T_{max}');
-    title(sprintf('Option 2: Deadline-energy envelopes | %s', solver));
+    title(sprintf('Option 2: Deadline-energy envelopes | %s%s', solver, variantStr));
     legend('base(CC-CR)','improved (CC-CR)','Location','best');
 end
 
-function plot_box_metric(baseVals, impVals, ylab, solver, isEstimated)
-    figure('Name', sprintf('%s (%s)', ylab, solver));
+function plot_box_metric(baseVals, impVals, ylab, solver, isEstimated, variant)
+    if nargin < 6, variant = ''; end
+    variantStr = '';
+    if ~isempty(variant) && ~strcmp(variant, 'unknown')
+        variantStr = sprintf(' [%s]', variant);
+    end
+    
+    figure('Name', sprintf('%s (%s%s)', ylab, solver, variantStr));
     vals = [baseVals(:); impVals(:)];
     grp  = [repmat({'CC-CR'}, numel(baseVals), 1); repmat({'improved CC-CR'}, numel(impVals), 1)];
     boxplot(vals, grp);
     grid on;
-    ttl = sprintf('%s | %s', ylab, solver);
+    ttl = sprintf('%s | %s%s', ylab, solver, variantStr);
     if isEstimated
         ttl = [ttl ' (estimated)'];
     end

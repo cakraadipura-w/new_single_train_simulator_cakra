@@ -9,7 +9,8 @@ function [archive, hist] = spea2_main(vel_profile)
     archive_size = pop_size;
     target = 2;
     log = false;
-    plotDisplay = true;
+    global show_progress
+    plotDisplay = ~isempty(show_progress) && isscalar(show_progress) && logical(show_progress);
     
     % ----- bounds (same logic as nsga2_main) -----
     lb = 20 + zeros(1,dimension);

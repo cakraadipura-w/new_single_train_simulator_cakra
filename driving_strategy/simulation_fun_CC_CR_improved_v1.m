@@ -50,8 +50,8 @@ alpha_brake = 1.0;
 try
     nXexp = sum(var);
     if numel(X) == nXexp + 2
-        alpha_trac  = min(max(X(end-1), 0.5), 1.0);
-        alpha_brake = min(max(X(end  ), 0.5), 1.0);
+        alpha_trac  = min(max(X(end-1), 0.8), 1.0);
+        alpha_brake = min(max(X(end  ), 0.8), 1.0);
         X = X(1:end-2);
     end
 catch

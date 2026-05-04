@@ -272,6 +272,21 @@ switch char(solver)
             error('moead_main.m not found.');
         end
         pop = moead_main(vel_profile);
+    case 'de_moea'
+        if exist('de_moea_main','file')~=2
+            error('de_moea_main.m not found. Run experiments/exp_E3_benchmark.m or add optimiser/de_moea_main.m');
+        end
+        [pop,~,~] = de_moea_main(vel_profile);
+    case 'dp'
+        if exist('dp_main','file')~=2
+            error('dp_main.m not found.');
+        end
+        [pop,~,~] = dp_main(vel_profile);
+    case 'dqn'
+        if exist('dqn_main','file')~=2
+            error('dqn_main.m not found.');
+        end
+        [pop,~,~] = dqn_main(vel_profile);
     otherwise
         error('Unknown solver: %s', solver);
 end

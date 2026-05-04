@@ -1,0 +1,1 @@
+{"sections":[{"section_id":1,"policy_type":"normal","cruise_ratio":0.92,"coast_ratio":0.80,"high_ratio":null,"low1_ratio":null},{"section_id":2,"policy_type":"downhill","cruise_ratio":null,"coast_ratio":null,"high_ratio":0.72,"low1_ratio":0.42},{"section_id":3,"policy_type":"normal","cruise_ratio":0.84,"coast_ratio":0.67,"high_ratio":null,"low1_ratio":null}]}
