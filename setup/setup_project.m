@@ -47,14 +47,13 @@ else
 end
 
 % ================= LOCATE FILES =================
-routePath = which(cfg.route_file);
-if isempty(routePath)
-    if exist(cfg.route_file,'file')==2
-        routePath = fullfile(pwd, cfg.route_file);
-    else
-        error('Route file not found: %s', cfg.route_file);
-    end
+project_root = fileparts(fileparts(mfilename('fullpath')));
+if isfield(cfg, 'route_direction') && ~isempty(cfg.route_direction)
+    route_direction = cfg.route_direction;
+else
+    route_direction = 'up';
 end
+routePath = resolve_project_route_path(project_root, cfg.route_file, route_direction);
 
 rsPath = which(cfg.rollingstock_file);
 if isempty(rsPath)
@@ -129,8 +128,9 @@ fprintf('Setup done | strategy=%s | use_improved=%d | dimension=%d | pop=%d | it
 
 % ================= RETURN INFO =================
 info = struct();
-info.project_root     = pwd;
+info.project_root     = project_root;
 info.routePath        = routePath;
+info.route_direction  = route_direction;
 info.rollingstockPath = rsPath;
 info.dimension        = dimension;
 info.pop_size         = pop_size;

@@ -8,7 +8,9 @@
 % Outputs : E2_results.csv, E2_summary.txt, two figures
 
 clc;
-addpath(genpath(fullfile(fileparts(mfilename('fullpath')), '..')));
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(script_dir);
+addpath(genpath(project_root));
 
 %% ===== SETTINGS =====
 RS_FILE    = 'rollingstock_Guangzhou_L7.m';
@@ -19,16 +21,14 @@ FEAS_CRIT  = 0.95;
 
 % Jika dipanggil dari main_experiments.m, gunakan ACTIVE_SEG dari workspace
 if exist('ACTIVE_SEG','var') && ~isempty(ACTIVE_SEG)
-    SEGMENTS = struct('name', {ACTIVE_SEG.name}, 'file', {ACTIVE_SEG.file});
+    SEGMENTS = ACTIVE_SEG;
     N_RUNS   = ACTIVE_NRUNS;
-    OUT_DIR  = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results', ACTIVE_SEG.name);
+    OUT_DIR  = fullfile(project_root, 'experiment_results', ACTIVE_SEG.name);
 else
-    SEGMENTS = struct( ...
-        'name', {'IS04','IS08'}, ...
-        'file', {'Guangzhou_Line7_IS04_5.200-6.842km.mat', ...
-                 'Guangzhou_Line7_IS08_13.729-17.507km.mat'});
+    default_segments = get_guangzhou_line7_catalog('up');
+    SEGMENTS = default_segments([4, 8]);
     N_RUNS   = 30;
-    OUT_DIR  = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results');
+    OUT_DIR  = fullfile(project_root, 'experiment_results');
 end
 if ~exist(OUT_DIR,'dir'), mkdir(OUT_DIR); end
 
@@ -61,7 +61,7 @@ for si = 1:n_seg
     cfg = struct('route_file', seg_file, 'rollingstock_file', RS_FILE, ...
         'driving_strategy', "CC_CR", 'pop_size', POP_SIZE, 'iterations', ITERATIONS, ...
         'use_improved', true, 'nsga2_variant', 'rl_sde', 'parallel_use', true, ...
-        'sim', struct());
+        'route_direction', SEGMENTS(si).direction, 'sim', struct());
     info = setup_project(cfg);
 
     setup_parallel_pool(cfg, info);

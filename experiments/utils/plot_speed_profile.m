@@ -16,7 +16,9 @@ function plot_speed_profile(mat_file, ri, pi_idx)
 % 'results' struct with fields: X, F, strategy, use_improved,
 % route_file, rs_file, config_id, config_desc.
 
-addpath(genpath(fullfile(fileparts(mfilename('fullpath')), '..')));
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(script_dir));
+addpath(genpath(project_root));
 
 if nargin < 1 || isempty(mat_file)
     error('Provide path to a .mat file (e.g. E1_A_vs_D.mat)');
@@ -104,12 +106,25 @@ route_file = r.route_file;
 rs_file    = r.rs_file;
 use_imp    = r.use_improved;
 
-routePath = which(route_file);
-rsPath    = which(rs_file);
+route_direction = '';
+if isfield(r, 'route_direction') && ~isempty(r.route_direction)
+    route_direction = r.route_direction;
+elseif contains(route_file, 'Guangzhou_Line7_Down_', 'IgnoreCase', true)
+    route_direction = 'down';
+elseif contains(route_file, 'Guangzhou_Line7_', 'IgnoreCase', true)
+    route_direction = 'up';
+end
+
+routePath = resolve_project_route_path(project_root, route_file, route_direction);
+if isfile(rs_file)
+    rsPath = rs_file;
+else
+    rsPath = which(rs_file);
+end
 
 if isempty(routePath)
     error(['Route file not found in path: %s\n' ...
-        'Make sure you ran addpath(genpath(...)) for the project root.'], route_file);
+        'Make sure the project root is on the MATLAB path.'], route_file);
 end
 if isempty(rsPath)
     error('Rollingstock file not found in path: %s', rs_file);

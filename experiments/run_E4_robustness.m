@@ -10,7 +10,9 @@
 % Outputs  : E4_results.csv, E4_summary.txt, boxplot, bar chart
 
 clc;
-addpath(genpath(fullfile(fileparts(mfilename('fullpath')), '..')));
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(script_dir);
+addpath(genpath(project_root));
 
 %% ===== CONFIG =====
 RS_FILE    = 'rollingstock_Guangzhou_L7.m';
@@ -23,13 +25,17 @@ ITERATIONS = 300;
 if exist('ACTIVE_SEG','var') && ~isempty(ACTIVE_SEG)
     ROUTE_IS04 = ACTIVE_SEG.file;
     T_TARGET   = ACTIVE_SEG.T_sched;
+    ROUTE_DIRECTION = ACTIVE_SEG.direction;
     N_RUNS     = ACTIVE_NRUNS;
-    OUT_DIR    = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results', ACTIVE_SEG.name);
+    OUT_DIR    = fullfile(project_root, 'experiment_results', ACTIVE_SEG.name);
 else
-    ROUTE_IS04 = 'Guangzhou_Line7_IS04_5.200-6.842km.mat';
+    default_seg = get_guangzhou_line7_catalog('up', [130, 170, 185, 180, 185, 220, 210, 330]);
+    default_seg = default_seg(4);
+    ROUTE_IS04 = default_seg.file;
     T_TARGET   = 180;
+    ROUTE_DIRECTION = default_seg.direction;
     N_RUNS     = 30;
-    OUT_DIR    = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results');
+    OUT_DIR    = fullfile(project_root, 'experiment_results');
 end
 
 MASS_AW0   = 1.00;
@@ -58,7 +64,8 @@ time_obj_max     = T_TARGET * 1.50;   % lebih longgar untuk phase optimasi
 
 cfg = struct('route_file',ROUTE_IS04,'rollingstock_file',RS_FILE, ...
     'driving_strategy',"CC_CR",'pop_size',POP_SIZE,'iterations',ITERATIONS, ...
-    'use_improved',true,'nsga2_variant','rl_sde','parallel_use',true,'sim',struct());
+    'use_improved',true,'nsga2_variant','rl_sde','parallel_use',true, ...
+    'route_direction', ROUTE_DIRECTION, 'sim',struct());
 
 info = setup_project(cfg);
 Mass_AW0_nom = Mass;

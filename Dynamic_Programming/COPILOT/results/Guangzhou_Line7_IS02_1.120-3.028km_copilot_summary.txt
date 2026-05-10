@@ -1,0 +1,19 @@
+=== COPILOT TARGET-TIME SUMMARY | IS02 ===
+Route file            : Guangzhou_Line7_IS02_1.120-3.028km.mat
+T_sched               : 169.0 s
+Targets               : [169 170 171 172 173 ]
+Grid                  : dx=1.00 m | dv_req=0.30 m/s | dv_used=0.10 m/s | stages=1909 | speeds=243 | controls=20
+Distance              : 1908.0 m
+Energy polish         : 1 | continue-after-match: 1
+Speed plot            : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Dynamic_Programming\COPILOT\results\Guangzhou_Line7_IS02_1.120-3.028km_copilot_speed_profile.png
+Energy plot           : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Dynamic_Programming\COPILOT\results\Guangzhou_Line7_IS02_1.120-3.028km_copilot_energy_curve.png
+
+Target (s) | Match (s)  | Error (s)  | Energi (kWh) | Lambda     | Solve (s)  | Status  
+-----------------------------------------------------------------------------------------
+169.0      | 169.375    | +0.375     | 19.951       | 0.07240    | 1285.61    | matched 
+170.0      | 170.309    | +0.309     | 19.885       | 0.07082    | 1019.92    | matched 
+171.0      | 171.411    | +0.411     | 19.809       | 0.06901    | 889.52     | matched 
+172.0      | 172.284    | +0.284     | 19.754       | 0.06801    | 889.20     | matched 
+173.0      | 173.330    | +0.330     | 19.690       | 0.06674    | 775.85     | matched 
+-----------------------------------------------------------------------------------------
+Matched 5/5 | Avg |error| = 0.342 s | Best energy = 19.690 kWh | Total search wall time = 4860.11 s | Avg solve = 972.02 s

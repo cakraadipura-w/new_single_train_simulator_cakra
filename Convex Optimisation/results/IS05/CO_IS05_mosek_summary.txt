@@ -1,0 +1,9 @@
+Segment              : IS05
+Solver               : mosek
+Route file            : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\Guangzhou_Line7_IS05_6.842-8.958km.mat
+Status                : Solved
+Target time (s)       : 185.000000
+Actual time (s)       : 184.996377
+Energy (kWh)          : 28.280557
+Result MAT            : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS05\CO_IS05_mosek_result.mat
+Profile plot          : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS05\CO_IS05_mosek_profiles.png

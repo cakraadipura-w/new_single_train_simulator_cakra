@@ -18,21 +18,27 @@
 %   4. Save comparable HV/IGD/feasibility/energy metrics
 
 clc;
-addpath(genpath(fullfile(fileparts(mfilename('fullpath')), '..')));
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(script_dir);
+addpath(genpath(project_root));
 
 %% ===== SETTINGS =====
 if exist('ACTIVE_SEG','var') && ~isempty(ACTIVE_SEG)
     ROUTE_FILE = ACTIVE_SEG.file;
     T_TARGET   = ACTIVE_SEG.T_sched;
+    ROUTE_DIRECTION = ACTIVE_SEG.direction;
     N_RUNS     = ACTIVE_NRUNS;
-    OUT_DIR    = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results', ACTIVE_SEG.name);
+    OUT_DIR    = fullfile(project_root, 'experiment_results', ACTIVE_SEG.name);
     SEG_LABEL  = ACTIVE_SEG.name;
 else
-    ROUTE_FILE = 'Guangzhou_Line7_IS02_1.120-3.028km.mat';
+    default_seg = get_guangzhou_line7_catalog('up', [130, 170, 185, 180, 185, 220, 210, 330]);
+    default_seg = default_seg(2);
+    ROUTE_FILE = default_seg.file;
     T_TARGET   = 170;
+    ROUTE_DIRECTION = default_seg.direction;
     N_RUNS     = 10;
-    OUT_DIR    = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results', 'IS02');
-    SEG_LABEL  = 'IS02';
+    OUT_DIR    = fullfile(project_root, 'experiment_results', default_seg.name);
+    SEG_LABEL  = default_seg.name;
 end
 
 RS_FILE    = 'rollingstock_Guangzhou_L7.m';
@@ -73,7 +79,8 @@ time_obj_max     = SEARCH_TLIM;
 
 cfg = struct('route_file', ROUTE_FILE, 'rollingstock_file', RS_FILE, ...
     'driving_strategy', "CC_CR", 'pop_size', POP_SIZE, 'iterations', ITERATIONS, ...
-    'use_improved', false, 'nsga2_variant', 'original', 'parallel_use', true, 'sim', struct());
+    'use_improved', false, 'nsga2_variant', 'original', 'parallel_use', true, ...
+    'route_direction', ROUTE_DIRECTION, 'sim', struct());
 info = setup_project(cfg);
 
 % Build route summary from improved sectioning before starting the pool.
@@ -204,7 +211,7 @@ tmpl_r = struct('solver','','seed',0,'pop_size',0,'dim',0,'iterations',0, ...
     'runtime',NaN,'AllX',zeros(0,0),'AllF',zeros(0,2),'X',zeros(0,0),'F',zeros(0,2), ...
     'HV',NaN,'IGD',NaN,'Spread',NaN,'Nf1',0,'nsga2_variant','','config_id','', ...
     'config_desc','','use_improved',false,'use_llm_advisor',false, ...
-    'route_file','','rs_file','');
+    'route_file','','route_direction','','rs_file','');
 results = repmat(tmpl_r, 0, 1);
 
 for ci = 1:n_cfg
@@ -252,6 +259,7 @@ for ci = 1:n_cfg
         r.use_improved    = CONFIGS(ci).use_improved;
         r.use_llm_advisor = CONFIGS(ci).use_llm_advisor;
         r.route_file      = ROUTE_FILE;
+        r.route_direction = ROUTE_DIRECTION;
         r.rs_file         = RS_FILE;
 
         r.AllX = double(pop_r(:, 1:d));
@@ -280,6 +288,7 @@ meta = struct( ...
     'n_workers', N_WORKERS, ...
     'search_tlim_s', SEARCH_TLIM, ...
     'route_file', ROUTE_FILE, ...
+    'route_direction', ROUTE_DIRECTION, ...
     'rs_file', RS_FILE, ...
     'response_file', RESPONSE_FILE);
 metrics_table = T_csv;

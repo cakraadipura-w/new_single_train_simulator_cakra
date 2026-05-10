@@ -176,10 +176,26 @@ end
 % =========================================================================
 
 function p = resolve_path(f)
+    if isfile(f)
+        p = f;
+        return;
+    end
     if exist(f,'file') == 2
         p = which(f);
         if isempty(p), p = f; end
         return;
+    end
+    script_dir = fileparts(mfilename('fullpath'));
+    project_root = fileparts(fileparts(script_dir));
+    [~, ~, ext] = fileparts(f);
+    if strcmpi(ext, '.mat')
+        try
+            p = resolve_project_route_path(project_root, f, '');
+            if ~isempty(p)
+                return;
+            end
+        catch
+        end
     end
     p = which(f);
     if isempty(p)

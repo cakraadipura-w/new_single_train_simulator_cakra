@@ -1,0 +1,22 @@
+CODEX DP quick sanity run
+=========================
+
+Script:
+Dynamic_Programming/CODEX/TEST_DP_MULTI_SEGMENT_CODEX.m
+
+Default run written here:
+- selected_segments = 'IS01'
+- target_T_offsets = 0
+- dx = 1 m
+- dv_used = 0.10 m/s
+- control refinement used = 0.15
+- energy polish enabled
+
+Latest verified result:
+IS01 target 129 s -> 129.297 s, error +0.297 s, traction energy 8.883 kWh.
+
+For the full batch, edit the script configuration:
+selected_segments = 'all';
+target_T_offsets = 0:4;
+
+That full batch will take substantially longer than the quick sanity run.

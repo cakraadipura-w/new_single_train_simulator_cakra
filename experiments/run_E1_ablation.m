@@ -18,7 +18,9 @@
 %          E1_energy_combined.png, E1_hv_bar.png
 
 clc;
-addpath(genpath(fullfile(fileparts(mfilename('fullpath')), '..')));
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(script_dir);
+addpath(genpath(project_root));
 
 %% ===== RUN SWITCHES =====
 % Set each flag to true to run that config, false to load from cache.
@@ -53,15 +55,19 @@ CONFIG_RUNS = struct('A', 1,     'B', 1,     'C', 1,     'D', 1);
 if exist('ACTIVE_SEG','var') && ~isempty(ACTIVE_SEG)
     ROUTE_IS04 = ACTIVE_SEG.file;
     T_TARGET   = ACTIVE_SEG.T_sched;
-    OUT_DIR    = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results', ACTIVE_SEG.name);
+    ROUTE_DIRECTION = ACTIVE_SEG.direction;
+    OUT_DIR    = fullfile(project_root, 'experiment_results', ACTIVE_SEG.name);
     N_RUNS     = ACTIVE_NRUNS;
     SEG_LABEL  = ACTIVE_SEG.name;
 else
-    ROUTE_IS04 = 'Guangzhou_Line7_IS02_3.548-4.908km.mat';
+    default_seg = get_guangzhou_line7_catalog('up', [130, 170, 185, 180, 185, 220, 210, 330]);
+    default_seg = default_seg(2);
+    ROUTE_IS04 = default_seg.file;
     T_TARGET   = 170;
     N_RUNS     = 30;
-    OUT_DIR    = fullfile(fileparts(mfilename('fullpath')), '..', 'experiment_results', 'IS02');
-    SEG_LABEL  = 'IS02';
+    ROUTE_DIRECTION = default_seg.direction;
+    OUT_DIR    = fullfile(project_root, 'experiment_results', default_seg.name);
+    SEG_LABEL  = default_seg.name;
 end
 RS_FILE    = 'rollingstock_Guangzhou_L7.m';
 POP_SIZE   = 300;
@@ -98,7 +104,7 @@ time_obj_max     = SEARCH_TLIM;   % lebih longgar — mode santai tetap bisa dit
 cfg = struct('route_file', ROUTE_IS04, 'rollingstock_file', RS_FILE, ...
     'driving_strategy', "CC_CR", 'pop_size', POP_SIZE, 'iterations', ITERATIONS, ...
     'use_improved', false, 'nsga2_variant', 'original', ...
-    'parallel_use', true, 'sim', struct());
+    'parallel_use', true, 'route_direction', ROUTE_DIRECTION, 'sim', struct());
 info = setup_project(cfg);
 
 [~, E_BASELINE] = flat_out_baseline_rk4(info.routePath, info.rollingstockPath);
@@ -316,7 +322,7 @@ tmpl_r = struct('strategy','','solver','','seed',0,'pop_size',0,'dim',0, ...
     'iterations',0,'runtime',NaN,'AllX',zeros(0,0),'AllF',zeros(0,2), ...
     'X',zeros(0,0),'F',zeros(0,2),'HV',NaN,'IGD',NaN,'Nf1',0, ...
     'nsga2_variant','','config_id','','config_desc','', ...
-    'use_improved',false,'route_file','','rs_file','');
+    'use_improved',false,'route_file','','route_direction','','rs_file','');
 
 all_results = repmat(tmpl_r, 0, 1);
 for ci = 1:n_cfg
@@ -337,6 +343,7 @@ for ci = 1:n_cfg
         r.use_improved  = CONFIGS(ci).use_improved;
         r.strategy      = ternary(CONFIGS(ci).use_improved, 'improved', 'base');
         r.route_file    = ROUTE_IS04;
+        r.route_direction = ROUTE_DIRECTION;
         r.rs_file       = RS_FILE;
 
         pop_r = pops_all{ci, run_id};

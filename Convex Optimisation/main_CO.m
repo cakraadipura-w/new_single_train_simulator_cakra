@@ -1,0 +1,519 @@
+%% main_CO.m - Convex optimization prototype for train trajectory
+% Run this file directly from the MATLAB editor.
+%
+% Notes:
+% - Requires CVX to be installed and already added to the MATLAB path.
+% - The traction power limit is enforced using a conservative affine
+%   approximation around the base-speed point so the model stays convex.
+
+clear; clc; close all;
+
+%% ---------------------- User settings ----------------------
+route_direction = 'up';       % 'up' | 'down'
+selected_segments = {'IS08'};   % {'IS01'}, {'IS01','IS02'}, or 'all'
+T_target_override = [];         % [] -> use scheduled time from catalog
+dx_nominal = 1;                % nominal space step (m)
+cvx_solver_name = 'mosek';     % 'sdpt3', 'sedumi', or 'mosek' if licensed in CVX
+show_figures = true;
+
+%% ---------------------- Setup ----------------------
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(script_dir);
+addpath(genpath(project_root));
+
+ensure_cvx_ready(project_root, script_dir);
+solver_tag = normalize_solver_token(cvx_solver_name);
+apply_cvx_solver_selection(cvx_solver_name);
+
+segment_catalog = build_segment_catalog(route_direction);
+selected_catalog = resolve_segment_selection(selected_segments, segment_catalog);
+
+results_root = fullfile(script_dir, 'results');
+if ~exist(results_root, 'dir')
+    mkdir(results_root);
+end
+
+fprintf('Loading rolling stock...\n');
+rollingstock_file = fullfile(project_root, 'rollingstocks', 'rollingstock_Guangzhou_L7.m');
+run(rollingstock_file);
+
+params = struct();
+params.gravity = 9.81;
+params.M_eff = Mass * (1 + lambda) * 1000;     % kg
+params.Davis = Davis;
+params.max_traction_N = max_traction * 1000;   % N
+params.max_accel_trac = max_accel_trac;
+params.max_accel_brake = max_accel_brake;
+params.Max_tractive_power = Max_tractive_power; % W
+params.V1_traction = V1_traction;
+params.min_avg_speed = 0.10;                   % m/s, keep inv_pos well-defined
+
+results = repmat(init_result_struct(), 0, 1);
+
+%% ---------------------- Solve per segment ----------------------
+for seg_idx = 1:numel(selected_catalog)
+    seg = selected_catalog(seg_idx);
+
+    if isempty(T_target_override)
+        T_target = seg.T_sched;
+    else
+        T_target = T_target_override;
+    end
+
+    route_file = resolve_project_route_path(project_root, seg.file, route_direction);
+    out_dir = fullfile(results_root, seg.name);
+    if ~exist(out_dir, 'dir')
+        mkdir(out_dir);
+    end
+
+    fprintf('\n============================================================\n');
+    fprintf('Convex optimization | %s\n', seg.name);
+    fprintf('Route file          | %s\n', route_file);
+    fprintf('Target time         | %.2f s\n', T_target);
+    fprintf('Results folder      | %s\n', out_dir);
+    fprintf('============================================================\n');
+
+    route_data = load(route_file);
+    problem = build_segment_problem(route_data, params, T_target, dx_nominal);
+    solution = solve_convex_segment(problem, params);
+
+    result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag);
+    save_segment_outputs(result, show_figures);
+    results(end+1, 1) = result; %#ok<AGROW>
+end
+
+batch_file = fullfile(results_root, sprintf('CO_batch_results_%s.mat', solver_tag));
+save(batch_file, 'results');
+fprintf('\nSaved batch results: %s\n', batch_file);
+
+%% ---------------------- Local helpers ----------------------
+
+function catalog = build_segment_catalog(route_direction)
+    catalog = get_guangzhou_line7_catalog(route_direction);
+end
+
+function selected_catalog = resolve_segment_selection(selected_segments, catalog)
+    if ischar(selected_segments) || (isstring(selected_segments) && isscalar(selected_segments))
+        selected_segments = cellstr(string(selected_segments));
+    elseif isstring(selected_segments)
+        selected_segments = cellstr(selected_segments(:));
+    elseif ~iscell(selected_segments)
+        error('selected_segments must be ''all'', a string, or a cell array of strings.');
+    end
+
+    if isscalar(selected_segments) && strcmpi(string(selected_segments{1}), 'all')
+        selected_catalog = catalog;
+        return;
+    end
+
+    selected_catalog = repmat(catalog(1), 0, 1);
+    keep_mask = false(1, numel(catalog));
+    names = {catalog.name};
+    files = {catalog.file};
+
+    for idx = 1:numel(selected_segments)
+        token = char(string(selected_segments{idx}));
+        match_idx = find(strcmpi(names, token) | strcmpi(files, token), 1);
+        if isempty(match_idx)
+            error('Unknown segment selection: %s', token);
+        end
+        if ~keep_mask(match_idx)
+            selected_catalog(end+1, 1) = catalog(match_idx); %#ok<AGROW>
+            keep_mask(match_idx) = true;
+        end
+    end
+end
+
+function ensure_cvx_ready(project_root, script_dir)
+    cvx_root = '';
+    cvx_setup_path = which('cvx_setup');
+
+    if ~isempty(cvx_setup_path)
+        cvx_root = fileparts(cvx_setup_path);
+        fprintf('CVX detected on MATLAB path. Refreshing setup...\n');
+    else
+        candidate_roots = build_cvx_candidate_roots(project_root, script_dir);
+
+        for idx = 1:numel(candidate_roots)
+            cvx_root = find_cvx_root(candidate_roots{idx});
+            if ~isempty(cvx_root)
+                break;
+            end
+        end
+    end
+
+    if isempty(cvx_root)
+        error(['CVX was not found on the MATLAB path or in common install folders.' newline ...
+            'Install steps:' newline ...
+            '1. Download CVX from https://cvxr.com/cvx/download' newline ...
+            '2. Extract it to a folder such as C:\Users\<user>\Documents\MATLAB\cvx' newline ...
+            '3. In MATLAB, run:' newline ...
+            '      cd(''<cvx-folder>'')' newline ...
+            '      cvx_setup' newline ...
+            '4. Then rerun main_CO.m']);
+    end
+
+    fprintf('CVX found at: %s\n', cvx_root);
+
+    old_dir = pwd;
+    cleanup = onCleanup(@() cd(old_dir));
+    cd(cvx_root);
+    cvx_setup;
+    clear cleanup;
+    cd(old_dir);
+
+    if exist('cvx_begin', 'file') ~= 2
+        error('CVX setup ran but cvx_begin is still unavailable. Open CVX folder manually and run cvx_setup again.');
+    end
+
+    fprintf('CVX setup completed successfully.\n');
+end
+
+function apply_cvx_solver_selection(solver_name)
+    if ~(ischar(solver_name) || (isstring(solver_name) && isscalar(solver_name)))
+        error('cvx_solver_name must be a character vector or scalar string.');
+    end
+
+    solver_name = strtrim(char(string(solver_name)));
+    if isempty(solver_name)
+        fprintf('CVX solver selection | using current session default.\n');
+        return;
+    end
+
+    try
+        cvx_solver(solver_name);
+    catch ME
+        cvx_setup_path = which('cvx_setup');
+        if ~isempty(cvx_setup_path)
+            fprintf('CVX solver selection | retrying after cvx_setup refresh...\n');
+            rerun_cvx_setup(fileparts(cvx_setup_path));
+            try
+                cvx_solver(solver_name);
+                fprintf('CVX solver selection | %s\n', solver_name);
+                return;
+            catch retryME
+                ME = retryME;
+            end
+        end
+
+        solver_info = strtrim(evalc('cvx_solver'));
+        error(['Requested CVX solver "%s" is not available.' newline ...
+            'CVX reports:' newline ...
+            '%s' newline ...
+            'Original error: %s'], solver_name, solver_info, ME.message);
+    end
+
+    fprintf('CVX solver selection | %s\n', solver_name);
+end
+
+function solver_tag = normalize_solver_token(solver_name)
+    solver_tag = strtrim(char(string(solver_name)));
+    if isempty(solver_tag)
+        solver_tag = 'default';
+        return;
+    end
+
+    solver_tag = lower(regexprep(solver_tag, '[^A-Za-z0-9]+', '_'));
+    solver_tag = regexprep(solver_tag, '^_+|_+$', '');
+    if isempty(solver_tag)
+        solver_tag = 'default';
+    end
+end
+
+function rerun_cvx_setup(cvx_root)
+    old_dir = pwd;
+    cleanup = onCleanup(@() cd(old_dir));
+    cd(cvx_root);
+    cvx_setup;
+    clear cleanup;
+    cd(old_dir);
+end
+
+function candidate_roots = build_cvx_candidate_roots(project_root, script_dir)
+    user_home = getenv('USERPROFILE');
+    if isempty(user_home)
+        user_home = char(java.lang.System.getProperty('user.home'));
+    end
+
+    program_roots = collect_program_files_cvx_roots();
+
+    candidate_roots = { ...
+        fullfile(project_root, 'cvx'), ...
+        fullfile(script_dir, 'cvx'), ...
+        fullfile(user_home, 'Documents', 'MATLAB', 'cvx'), ...
+        fullfile(user_home, 'MATLAB', 'cvx'), ...
+        fullfile(user_home, 'Documents', 'cvx'), ...
+        fullfile(user_home, 'Downloads', 'cvx'), ...
+        fullfile(user_home, 'Desktop', 'cvx'), ...
+        'C:\cvx'};
+
+    candidate_roots = unique([candidate_roots(:); program_roots(:)], 'stable');
+end
+
+function program_roots = collect_program_files_cvx_roots()
+    env_names = {'ProgramFiles', 'ProgramW6432', 'ProgramFiles(x86)'};
+    matlab_roots = cell(0, 1);
+
+    for idx = 1:numel(env_names)
+        base_dir = getenv(env_names{idx});
+        if isempty(base_dir)
+            continue;
+        end
+        matlab_dir = fullfile(base_dir, 'MATLAB');
+        if ~exist(matlab_dir, 'dir')
+            continue;
+        end
+        matlab_roots{end+1, 1} = fullfile(matlab_dir, 'cvx'); %#ok<AGROW>
+
+        entries = dir(matlab_dir);
+        for entry_idx = 1:numel(entries)
+            if ~entries(entry_idx).isdir
+                continue;
+            end
+            name = entries(entry_idx).name;
+            if strcmp(name, '.') || strcmp(name, '..')
+                continue;
+            end
+            matlab_roots{end+1, 1} = fullfile(matlab_dir, name, 'cvx'); %#ok<AGROW>
+        end
+    end
+
+    if isempty(matlab_roots)
+        program_roots = cell(1, 0);
+        return;
+    end
+
+    program_roots = unique(matlab_roots, 'stable');
+end
+
+function cvx_root = find_cvx_root(candidate)
+    cvx_root = '';
+
+    if isempty(candidate) || ~exist(candidate, 'dir')
+        return;
+    end
+
+    if exist(fullfile(candidate, 'cvx_setup.m'), 'file') == 2
+        cvx_root = candidate;
+        return;
+    end
+
+    entries = dir(candidate);
+    for idx = 1:numel(entries)
+        if ~entries(idx).isdir
+            continue;
+        end
+        name = entries(idx).name;
+        if strcmp(name, '.') || strcmp(name, '..')
+            continue;
+        end
+        child = fullfile(candidate, name);
+        if exist(fullfile(child, 'cvx_setup.m'), 'file') == 2
+            cvx_root = child;
+            return;
+        end
+    end
+end
+
+function problem = build_segment_problem(route_data, params, T_target, dx_nominal)
+    if ~isfield(route_data, 'vel_profile')
+        error('Route file is missing vel_profile.');
+    end
+
+    vel_lim_raw = route_data.vel_profile;          % [km, km/h]
+    if isfield(route_data, 'gradient')
+        grad_raw = route_data.gradient;            % [km, permil]
+    else
+        grad_raw = [vel_lim_raw(:,1), zeros(size(vel_lim_raw,1), 1)];
+    end
+
+    s_total = vel_lim_raw(end, 1) * 1000;
+    s_nodes = (0:dx_nominal:s_total)';
+    if abs(s_nodes(end) - s_total) > 1e-9
+        s_nodes = [s_nodes; s_total]; %#ok<AGROW>
+    end
+
+    ds = diff(s_nodes);
+    s_mid = s_nodes(1:end-1) + 0.5 * ds;
+
+    v_lim_nodes = interp1(vel_lim_raw(:,1) * 1000, vel_lim_raw(:,2) / 3.6, ...
+        s_nodes, 'previous', 'extrap');
+    g_permil_mid = interp1(grad_raw(:,1) * 1000, grad_raw(:,2), s_mid, 'linear', 0);
+
+    problem = struct();
+    problem.T_target = T_target;
+    problem.s_nodes = s_nodes;
+    problem.ds = ds;
+    problem.s_mid = s_mid;
+    problem.N = numel(s_nodes);
+    problem.M = numel(ds);
+    problem.v_lim_nodes = v_lim_nodes(:);
+    problem.G_seg = params.M_eff * params.gravity * (g_permil_mid(:) / 1000);
+end
+
+function solution = solve_convex_segment(problem, params)
+    N = problem.N;
+    M = problem.M;
+    ds = problem.ds;
+    v_lim_nodes = problem.v_lim_nodes;
+    G_seg = problem.G_seg;
+
+    davis_A = params.Davis(1) * 1000;
+    davis_B = params.Davis(2) * 1000;
+    davis_C = params.Davis(3) * 1000;
+
+    cvx_begin quiet
+        variables v(N) speed_sq(N) f_trac(M) tau(M)
+
+        minimize(sum(f_trac .* ds))
+
+        subject to
+            v(1) == 0;
+            v(N) == 0;
+            speed_sq(1) == 0;
+            speed_sq(N) == 0;
+
+            v >= 0;
+            v <= v_lim_nodes;
+            speed_sq >= square(v);
+            speed_sq <= square(v_lim_nodes);
+            f_trac >= 0;
+
+            for i = 1:M
+                v_avg = 0.5 * (v(i) + v(i+1));
+                beta_avg = 0.5 * (speed_sq(i) + speed_sq(i+1));
+                acc_i = (speed_sq(i+1) - speed_sq(i)) / (2 * ds(i));
+                resist_i = davis_A + davis_B * v_avg + davis_C * beta_avg;
+
+                f_trac(i) >= params.M_eff * acc_i + G_seg(i) + resist_i;
+                f_trac(i) <= params.max_traction_N;
+                f_trac(i) <= params.Max_tractive_power * tau(i);
+
+                acc_i <= params.max_accel_trac;
+                acc_i >= -params.max_accel_brake;
+
+                v_avg >= params.min_avg_speed;
+                tau(i) >= inv_pos(v_avg);
+            end
+
+            sum(tau .* ds) <= problem.T_target;
+    cvx_end
+
+    v_avg = 0.5 * (v(1:end-1) + v(2:end));
+    dt = ds ./ max(v_avg, params.min_avg_speed);
+    energy_joule = sum(f_trac .* ds);
+
+    solution = struct();
+    solution.status = cvx_status;
+    solution.optval = cvx_optval;
+    solution.v = full(double(v));
+    solution.beta = full(double(speed_sq));
+    solution.f_trac = full(double(f_trac));
+    solution.tau = full(double(tau));
+    solution.dt = full(double(dt));
+    solution.T_actual = sum(solution.dt);
+    solution.E_kWh = energy_joule / 3.6e6;
+end
+
+function result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag)
+    result = init_result_struct();
+    result.segment = seg.name;
+    result.solver = solver_tag;
+    result.route_file = route_file;
+    result.T_target = problem.T_target;
+    result.status = solution.status;
+    result.optval = solution.optval;
+    result.s_nodes = problem.s_nodes;
+    result.v_mps = solution.v;
+    result.v_kmph = solution.v * 3.6;
+    result.v_lim_kmph = problem.v_lim_nodes * 3.6;
+    result.f_trac_N = solution.f_trac;
+    result.f_trac_kN = solution.f_trac / 1000;
+    result.dt = solution.dt;
+    result.T_actual = solution.T_actual;
+    result.E_kWh = solution.E_kWh;
+    result.output_dir = out_dir;
+    result.result_mat = fullfile(out_dir, sprintf('CO_%s_%s_result.mat', seg.name, solver_tag));
+    result.summary_txt = fullfile(out_dir, sprintf('CO_%s_%s_summary.txt', seg.name, solver_tag));
+    result.plot_png = fullfile(out_dir, sprintf('CO_%s_%s_profiles.png', seg.name, solver_tag));
+end
+
+function save_segment_outputs(result, show_figures)
+    save(result.result_mat, 'result');
+
+    fid = fopen(result.summary_txt, 'w');
+    if fid ~= -1
+        fprintf(fid, 'Segment              : %s\n', result.segment);
+        fprintf(fid, 'Solver               : %s\n', result.solver);
+        fprintf(fid, 'Route file            : %s\n', result.route_file);
+        fprintf(fid, 'Status                : %s\n', result.status);
+        fprintf(fid, 'Target time (s)       : %.6f\n', result.T_target);
+        fprintf(fid, 'Actual time (s)       : %.6f\n', result.T_actual);
+        fprintf(fid, 'Energy (kWh)          : %.6f\n', result.E_kWh);
+        fprintf(fid, 'Result MAT            : %s\n', result.result_mat);
+        fprintf(fid, 'Profile plot          : %s\n', result.plot_png);
+        fclose(fid);
+    end
+
+    fig = figure('Visible', ternary(show_figures, 'on', 'off'), 'Color', 'w', ...
+        'Name', sprintf('CO | %s', result.segment), 'NumberTitle', 'off');
+
+    subplot(2,1,1);
+    plot(result.s_nodes / 1000, result.v_kmph, 'b-', 'LineWidth', 2); hold on;
+    stairs(result.s_nodes / 1000, result.v_lim_kmph, 'k--', 'LineWidth', 1.3);
+    xlabel('Distance (km)');
+    ylabel('Speed (km/h)');
+    title(sprintf('%s | %s | status=%s | T=%.2f s | E=%.3f kWh', ...
+        result.segment, upper(result.solver), result.status, result.T_actual, result.E_kWh));
+    legend('Optimal speed', 'Speed limit', 'Location', 'best');
+    grid on;
+
+    subplot(2,1,2);
+    plot(result.s_nodes(1:end-1) / 1000, result.f_trac_kN, 'r-', 'LineWidth', 1.5);
+    xlabel('Distance (km)');
+    ylabel('Tractive force (kN)');
+    title('Traction force profile');
+    grid on;
+
+    saveas(fig, result.plot_png);
+    if ~show_figures
+        close(fig);
+    end
+
+    fprintf('Status: %s | T_actual=%.2f s | E=%.3f kWh\n', ...
+        result.status, result.T_actual, result.E_kWh);
+    fprintf('Saved result  : %s\n', result.result_mat);
+    fprintf('Saved summary : %s\n', result.summary_txt);
+    fprintf('Saved plot    : %s\n', result.plot_png);
+end
+
+function result = init_result_struct()
+    result = struct( ...
+        'segment', '', ...
+        'solver', '', ...
+        'route_file', '', ...
+        'T_target', NaN, ...
+        'status', '', ...
+        'optval', NaN, ...
+        's_nodes', zeros(0,1), ...
+        'v_mps', zeros(0,1), ...
+        'v_kmph', zeros(0,1), ...
+        'v_lim_kmph', zeros(0,1), ...
+        'f_trac_N', zeros(0,1), ...
+        'f_trac_kN', zeros(0,1), ...
+        'dt', zeros(0,1), ...
+        'T_actual', NaN, ...
+        'E_kWh', NaN, ...
+        'output_dir', '', ...
+        'result_mat', '', ...
+        'summary_txt', '', ...
+        'plot_png', '');
+end
+
+function out = ternary(cond, true_value, false_value)
+    if cond
+        out = true_value;
+    else
+        out = false_value;
+    end
+end

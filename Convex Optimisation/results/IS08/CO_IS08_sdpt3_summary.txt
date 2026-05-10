@@ -1,0 +1,9 @@
+Segment              : IS08
+Solver               : sdpt3
+Route file            : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\Guangzhou_Line7_IS08_13.729-17.507km.mat
+Status                : Inaccurate/Solved
+Target time (s)       : 329.000000
+Actual time (s)       : 328.999957
+Energy (kWh)          : 47.382059
+Result MAT            : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS08\CO_IS08_sdpt3_result.mat
+Profile plot          : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS08\CO_IS08_sdpt3_profiles.png

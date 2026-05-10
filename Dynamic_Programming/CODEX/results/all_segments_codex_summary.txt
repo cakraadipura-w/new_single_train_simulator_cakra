@@ -1,0 +1,7 @@
+=== CODEX SUMMARY FOR ALL SEGMENTS ===
+Segment  | T_sched    | Targets     | Match    | Avg|Err| (s)  | Solve (s)    | Best E    
+-------------------------------------------------------------------------------------------
+IS01     | 129.0      | 129         | 1/1      | 0.297         | 129.22       | 8.883     
+-------------------------------------------------------------------------------------------
+Matched total 1/1 | Overall wall time = 145.34 s
+Saved summaries, MAT files, and plots in: C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Dynamic_Programming\CODEX\results
