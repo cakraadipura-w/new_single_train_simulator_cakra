@@ -280,6 +280,3 @@ Universitas Sultan Ageng Tirtayasa (Untirta)
 This project is for academic research purposes.  
 Route data and rolling stock parameters are based on publicly available data from Guangzhou Metro Line 7.
 
----
-
-*Generated with assistance from Claude Code (Anthropic) — claude-sonnet-4-6*
