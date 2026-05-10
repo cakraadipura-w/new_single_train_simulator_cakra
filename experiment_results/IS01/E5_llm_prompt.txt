@@ -1,0 +1,22 @@
+You are designing route-aware priors for an improved CC_CR train-driving strategy.
+
+Task:
+Return JSON only, with exactly one top-level key: "sections".
+Each entry must match a section_id from the route summary.
+Rules:
+- For policy_type="normal": return cruise_ratio and coast_ratio.
+- For policy_type="downhill": return high_ratio and low1_ratio.
+- All ratios must be in (0,1].
+- coast_ratio must not imply coasting above cruising.
+- low1_ratio must not imply LOW1 above HIGH.
+- MID is already gradient-adaptive in the simulator, so do not emit MID.
+- Optimize for meeting T_target while reducing energy, especially on downhill sections.
+
+Expected JSON schema:
+{"sections":[{"section_id":1,"policy_type":"normal","cruise_ratio":0.92,"coast_ratio":0.74},{"section_id":2,"policy_type":"downhill","high_ratio":0.85,"low1_ratio":0.67}]}
+
+Route summary JSON:
+{"segment_name":"IS01","t_target_s":130,"search_tlim_s":195,"dimension":2,"n_sections":1,"strategy_notes":"Improved CC_CR uses section-level priors. For policy_type=\"normal\", output cruise_ratio and coast_ratio. For policy_type=\"downhill\", output high_ratio and low1_ratio. Do not output MID; it is already computed adaptively inside the simulator.","sections":{"section_id":1,"start_km":0,"end_km":1.12,"length_m":1120,"speed_limit_kmh":80,"policy_type":"normal","expected_dv":2,"mean_gradient_permille":-2.3391071428571428,"min_gradient_permille":-2.7,"max_gradient_permille":2,"distance_to_next_station_m":null}}
+
+Write your response JSON to:
+C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS01\E5_llm_response.json

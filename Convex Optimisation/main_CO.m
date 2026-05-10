@@ -6,15 +6,28 @@
 % - The traction power limit is enforced using a conservative affine
 %   approximation around the base-speed point so the model stays convex.
 
-clear; clc; close all;
+clearvars -except route_direction selected_segments T_target_override dx_nominal cvx_solver_name show_figures
+clc; close all;
 
 %% ---------------------- User settings ----------------------
-route_direction = 'up';       % 'up' | 'down'
-selected_segments = {'IS08'};   % {'IS01'}, {'IS01','IS02'}, or 'all'
-T_target_override = [];         % [] -> use scheduled time from catalog
-dx_nominal = 1;                % nominal space step (m)
-cvx_solver_name = 'mosek';     % 'sdpt3', 'sedumi', or 'mosek' if licensed in CVX
-show_figures = true;
+if ~exist('route_direction', 'var') || isempty(route_direction)
+    route_direction = 'up';       % 'up' | 'down'
+end
+if ~exist('selected_segments', 'var') || isempty(selected_segments)
+    selected_segments = {'IS08'}; % {'IS01'}, {'IS01','IS02'}, or 'all'
+end
+if ~exist('T_target_override', 'var') || isempty(T_target_override)
+    T_target_override = [];       % [] -> use scheduled time from catalog
+end
+if ~exist('dx_nominal', 'var') || isempty(dx_nominal)
+    dx_nominal = 1;               % nominal space step (m)
+end
+if ~exist('cvx_solver_name', 'var') || isempty(cvx_solver_name)
+    cvx_solver_name = 'mosek';    % 'sdpt3', 'sedumi', or 'mosek' if licensed in CVX
+end
+if ~exist('show_figures', 'var') || isempty(show_figures)
+    show_figures = true;
+end
 
 %% ---------------------- Setup ----------------------
 script_dir = fileparts(mfilename('fullpath'));
@@ -73,11 +86,15 @@ for seg_idx = 1:numel(selected_catalog)
     fprintf('Results folder      | %s\n', out_dir);
     fprintf('============================================================\n');
 
+    segment_timer = tic;
     route_data = load(route_file);
     problem = build_segment_problem(route_data, params, T_target, dx_nominal);
+    solve_timer = tic;
     solution = solve_convex_segment(problem, params);
+    solve_time_s = toc(solve_timer);
+    processing_time_s = toc(segment_timer);
 
-    result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag);
+    result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag, solve_time_s, processing_time_s);
     save_segment_outputs(result, show_figures);
     results(end+1, 1) = result; %#ok<AGROW>
 end
@@ -125,6 +142,11 @@ function selected_catalog = resolve_segment_selection(selected_segments, catalog
 end
 
 function ensure_cvx_ready(project_root, script_dir)
+    if exist('cvx_begin', 'file') == 2 && exist('cvx_solver', 'file') == 2
+        fprintf('CVX already available on MATLAB path. Skipping cvx_setup refresh.\n');
+        return;
+    end
+
     cvx_root = '';
     cvx_setup_path = which('cvx_setup');
 
@@ -415,7 +437,7 @@ function solution = solve_convex_segment(problem, params)
     solution.E_kWh = energy_joule / 3.6e6;
 end
 
-function result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag)
+function result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag, solve_time_s, processing_time_s)
     result = init_result_struct();
     result.segment = seg.name;
     result.solver = solver_tag;
@@ -432,6 +454,8 @@ function result = build_segment_result(seg, route_file, out_dir, problem, soluti
     result.dt = solution.dt;
     result.T_actual = solution.T_actual;
     result.E_kWh = solution.E_kWh;
+    result.solve_time_s = solve_time_s;
+    result.processing_time_s = processing_time_s;
     result.output_dir = out_dir;
     result.result_mat = fullfile(out_dir, sprintf('CO_%s_%s_result.mat', seg.name, solver_tag));
     result.summary_txt = fullfile(out_dir, sprintf('CO_%s_%s_summary.txt', seg.name, solver_tag));
@@ -450,6 +474,8 @@ function save_segment_outputs(result, show_figures)
         fprintf(fid, 'Target time (s)       : %.6f\n', result.T_target);
         fprintf(fid, 'Actual time (s)       : %.6f\n', result.T_actual);
         fprintf(fid, 'Energy (kWh)          : %.6f\n', result.E_kWh);
+        fprintf(fid, 'Solve time (s)        : %.6f\n', result.solve_time_s);
+        fprintf(fid, 'Processing time (s)   : %.6f\n', result.processing_time_s);
         fprintf(fid, 'Result MAT            : %s\n', result.result_mat);
         fprintf(fid, 'Profile plot          : %s\n', result.plot_png);
         fclose(fid);
@@ -480,8 +506,8 @@ function save_segment_outputs(result, show_figures)
         close(fig);
     end
 
-    fprintf('Status: %s | T_actual=%.2f s | E=%.3f kWh\n', ...
-        result.status, result.T_actual, result.E_kWh);
+    fprintf('Status: %s | T_actual=%.2f s | E=%.3f kWh | solve=%.2f s | process=%.2f s\n', ...
+        result.status, result.T_actual, result.E_kWh, result.solve_time_s, result.processing_time_s);
     fprintf('Saved result  : %s\n', result.result_mat);
     fprintf('Saved summary : %s\n', result.summary_txt);
     fprintf('Saved plot    : %s\n', result.plot_png);
@@ -504,6 +530,8 @@ function result = init_result_struct()
         'dt', zeros(0,1), ...
         'T_actual', NaN, ...
         'E_kWh', NaN, ...
+        'solve_time_s', NaN, ...
+        'processing_time_s', NaN, ...
         'output_dir', '', ...
         'result_mat', '', ...
         'summary_txt', '', ...

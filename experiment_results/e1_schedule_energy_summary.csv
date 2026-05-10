@@ -1,0 +1,9 @@
+segment,target_time_s,experiment_id,best_config_id,best_config_desc,best_time_s,best_energy_kWh,time_gap_s,status,available_configs,source_file
+IS01,129,,,,NaN,NaN,NaN,missing E1/E5 data,0,
+IS02,169,E1,C,Improved CC_CR + Original NSGA-II,149.82964473637,27.8954089727002,-19.1703552636305,closest to target,4,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS02\E1_all_configs.mat
+IS03,184,E1,A,Original CC_CR + Original NSGA-II,184.750332775404,25.4459354616725,0.750332775404047,within target window,4,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS03\E1_all_configs.mat
+IS04,177,E5,A,Original CC_CR + Original NSGA-II,177.56470277682,16.9703970767015,0.564702776819644,within target window,6,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS04\E5_all_configs.mat
+IS05,185,E1,C,Improved CC_CR + Original NSGA-II,185.906391591368,23.0242047704331,0.906391591368276,within target window,4,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS05\E1_all_configs.mat
+IS06,219,E1,C,Improved CC_CR + Original NSGA-II,219.612942814603,17.6134153216548,0.612942814602548,within target window,4,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS06\E1_all_configs.mat
+IS07,214,E1,A,Original CC_CR + Original NSGA-II,214.777409041773,22.9756209208972,0.77740904177287,within target window,4,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS07\E1_all_configs.mat
+IS08,329,E1,C,Improved CC_CR + Original NSGA-II,325.872139613491,43.2561576727067,-3.1278603865087,closest to target,4,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS08\E1_all_configs.mat

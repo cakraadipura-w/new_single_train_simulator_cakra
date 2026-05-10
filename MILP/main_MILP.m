@@ -6,17 +6,34 @@
 % - This script auto-detects a local YALMIP checkout and can reuse the
 %   MOSEK MATLAB binary bundled under a CVX installation.
 
-clear; clc; close all;
+clearvars -except route_direction selected_segments T_target_override dx_nominal pwl_segment_count milp_solver_name show_figures verbose_level
+clc; close all;
 
 %% ---------------------- User settings ----------------------
-route_direction = 'up';       % 'up' | 'down'
-selected_segments = {'IS01'};    % {'IS01'}, {'IS01','IS02'}, or 'all'
-T_target_override = [];          % [] -> use scheduled time from catalog
-dx_nominal = 50;                 % nominal space step (m), start coarse for faster MILP runs
-pwl_segment_count = 8;           % number of PWL intervals, increase later for finer fidelity
-milp_solver_name = 'sdpt3';      % 'mosek', 'gurobi', 'sdpt3' or another YALMIP MILP solver
-show_figures = true;
-verbose_level = 1;
+if ~exist('route_direction', 'var') || isempty(route_direction)
+    route_direction = 'up';       % 'up' | 'down'
+end
+if ~exist('selected_segments', 'var') || isempty(selected_segments)
+    selected_segments = {'IS01'}; % {'IS01'}, {'IS01','IS02'}, or 'all'
+end
+if ~exist('T_target_override', 'var') || isempty(T_target_override)
+    T_target_override = [];       % [] -> use scheduled time from catalog
+end
+if ~exist('dx_nominal', 'var') || isempty(dx_nominal)
+    dx_nominal = 50;              % nominal space step (m), start coarse for faster MILP runs
+end
+if ~exist('pwl_segment_count', 'var') || isempty(pwl_segment_count)
+    pwl_segment_count = 8;        % number of PWL intervals, increase later for finer fidelity
+end
+if ~exist('milp_solver_name', 'var') || isempty(milp_solver_name)
+    milp_solver_name = 'sdpt3';   % 'mosek', 'gurobi', 'sdpt3' or another YALMIP MILP solver
+end
+if ~exist('show_figures', 'var') || isempty(show_figures)
+    show_figures = true;
+end
+if ~exist('verbose_level', 'var') || isempty(verbose_level)
+    verbose_level = 1;
+end
 
 %% ---------------------- Setup ----------------------
 script_dir = fileparts(mfilename('fullpath'));
@@ -74,11 +91,13 @@ for seg_idx = 1:numel(selected_catalog)
     fprintf('Results folder      | %s\n', out_dir);
     fprintf('============================================================\n');
 
+    segment_timer = tic;
     route_data = load(route_file);
     problem = build_segment_problem(route_data, params, T_target, dx_nominal, pwl_segment_count);
     solution = solve_milp_segment(problem, params, milp_solver_name, verbose_level);
+    processing_time_s = toc(segment_timer);
 
-    result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag);
+    result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag, processing_time_s);
     save_segment_outputs(result, show_figures);
     results(end+1, 1) = result; %#ok<AGROW>
 end
@@ -500,7 +519,9 @@ function solution = solve_milp_segment(problem, params, solver_name, verbose_lev
     Objective = sum(f_trac .* ds);
 
     ops = sdpsettings('solver', solver_name, 'verbose', verbose_level);
+    solve_timer = tic;
     diagnosis = optimize(Constraints, Objective, ops);
+    solve_wall_time_s = toc(solve_timer);
     if diagnosis.problem ~= 0
         error('MILP solver failed: %s', diagnosis.info);
     end
@@ -517,9 +538,10 @@ function solution = solve_milp_segment(problem, params, solver_name, verbose_lev
     solution.dt = full(value(t_seg));
     solution.T_actual = sum(solution.dt);
     solution.E_kWh = solution.optval / 3.6e6;
+    solution.solve_time_s = extract_diagnostic_seconds(diagnosis, 'solvertime', solve_wall_time_s);
 end
 
-function result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag)
+function result = build_segment_result(seg, route_file, out_dir, problem, solution, solver_tag, processing_time_s)
     result = init_result_struct();
     result.segment = seg.name;
     result.solver = solver_tag;
@@ -538,6 +560,8 @@ function result = build_segment_result(seg, route_file, out_dir, problem, soluti
     result.dt = solution.dt;
     result.T_actual = solution.T_actual;
     result.E_kWh = solution.E_kWh;
+    result.solve_time_s = solution.solve_time_s;
+    result.processing_time_s = processing_time_s;
     result.output_dir = out_dir;
     result.result_mat = fullfile(out_dir, sprintf('MILP_%s_%s_result.mat', seg.name, solver_tag));
     result.summary_txt = fullfile(out_dir, sprintf('MILP_%s_%s_summary.txt', seg.name, solver_tag));
@@ -554,9 +578,11 @@ function save_segment_outputs(result, show_figures)
         fprintf(fid, 'Route file           : %s\n', result.route_file);
         fprintf(fid, 'Status               : %s\n', result.status);
         fprintf(fid, 'Solver info          : %s\n', result.diagnosis_info);
-        fprintf(fid, 'Target time (s)      : %.6f\n', result.T_target);
-        fprintf(fid, 'Actual time (s)      : %.6f\n', result.T_actual);
+        fprintf(fid, 'Target time          : %s\n', format_time_seconds_minutes(result.T_target));
+        fprintf(fid, 'Actual time          : %s\n', format_time_seconds_minutes(result.T_actual));
         fprintf(fid, 'Energy (kWh)         : %.6f\n', result.E_kWh);
+        fprintf(fid, 'Solve time           : %s\n', format_time_seconds_minutes(result.solve_time_s));
+        fprintf(fid, 'Processing time      : %s\n', format_time_seconds_minutes(result.processing_time_s));
         fprintf(fid, 'Result MAT           : %s\n', result.result_mat);
         fprintf(fid, 'Profile plot         : %s\n', result.plot_png);
         fclose(fid);
@@ -587,8 +613,9 @@ function save_segment_outputs(result, show_figures)
         close(fig);
     end
 
-    fprintf('Status: %s | T_actual=%.2f s | E=%.3f kWh\n', ...
-        result.status, result.T_actual, result.E_kWh);
+    fprintf('Status: %s | T_actual=%s | E=%.3f kWh | solve=%s | process=%s\n', ...
+        result.status, format_time_seconds_minutes(result.T_actual), result.E_kWh, ...
+        format_time_seconds_minutes(result.solve_time_s), format_time_seconds_minutes(result.processing_time_s));
     fprintf('Saved result  : %s\n', result.result_mat);
     fprintf('Saved summary : %s\n', result.summary_txt);
     fprintf('Saved plot    : %s\n', result.plot_png);
@@ -613,10 +640,26 @@ function result = init_result_struct()
         'dt', zeros(0,1), ...
         'T_actual', NaN, ...
         'E_kWh', NaN, ...
+        'solve_time_s', NaN, ...
+        'processing_time_s', NaN, ...
         'output_dir', '', ...
         'result_mat', '', ...
         'summary_txt', '', ...
         'plot_png', '');
+end
+
+function seconds = extract_diagnostic_seconds(diagnosis, field_name, fallback_value)
+    seconds = fallback_value;
+    if isstruct(diagnosis) && isfield(diagnosis, field_name)
+        candidate = diagnosis.(field_name);
+        if isnumeric(candidate) && isscalar(candidate) && isfinite(candidate)
+            seconds = double(candidate);
+        end
+    end
+end
+
+function text = format_time_seconds_minutes(seconds)
+    text = sprintf('%.6f s (%.6f min)', seconds, seconds / 60);
 end
 
 function out = ternary(cond, true_value, false_value)

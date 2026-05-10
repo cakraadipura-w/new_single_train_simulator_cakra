@@ -1,0 +1,10 @@
+Experiment E5 — LLM Advisor Study
+Segment: IS01 | T_target=130 s | E_baseline=41.0070 kWh
+Pop=300 | Gen=300 | Runs=1 | Workers=4
+Response file: C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS01\E5_llm_response.json
+
+Config         HV_mean    HV_std  IGD_mean   Feas_mean   EnSav_pct
+D               1.1595    0.0000    0.0000       0.687       77.68
+
+Wilcoxon signed-rank test (HV, paired seeds) — D_LLM vs others:
+  Skipped: D_LLM is not part of the selected config subset.

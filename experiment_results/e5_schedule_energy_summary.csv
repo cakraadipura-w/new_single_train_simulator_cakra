@@ -1,0 +1,9 @@
+segment,target_time_s,experiment_id,best_config_id,best_config_desc,best_time_s,best_energy_kWh,time_gap_s,status,available_configs,source_file
+IS01,129,,,,NaN,NaN,NaN,missing E5 data,0,
+IS02,169,E5,D_LLM,Improved CC_CR + BRL-SDE-NSGA-II + LLM advisor,169.965503525849,20.0682490648074,0.965503525849471,within target window,6,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS02\E5_all_configs.mat
+IS03,184,E5,A,Original CC_CR + Original NSGA-II,184.964985523057,25.4017787434535,0.964985523056555,within target window,6,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS03\E5_all_configs.mat
+IS04,177,E5,A,Original CC_CR + Original NSGA-II,177.56470277682,16.9703970767015,0.564702776819644,within target window,6,C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\experiment_results\IS04\E5_all_configs.mat
+IS05,185,,,,NaN,NaN,NaN,missing E5 data,0,
+IS06,219,,,,NaN,NaN,NaN,missing E5 data,0,
+IS07,214,,,,NaN,NaN,NaN,missing E5 data,0,
+IS08,329,,,,NaN,NaN,NaN,missing E5 data,0,

@@ -1,10 +1,12 @@
 Segment              : IS04
 Solver               : mosek
-Route file           : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\Guangzhou_Line7_IS04_5.200-6.842km.mat
+Route file           : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS04_5.200-6.842km.mat
 Status               : Solved
 Solver info          : Successfully solved (MOSEK-LP/QP-INTEGER)
-Target time (s)      : 177.000000
-Actual time (s)      : 177.000000
+Target time          : 177.000000 s (2.950000 min)
+Actual time          : 177.000000 s (2.950000 min)
 Energy (kWh)         : 21.740703
+Solve time           : 2.857894 s (0.047632 min)
+Processing time      : 5.976255 s (0.099604 min)
 Result MAT           : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\MILP\results\IS04\MILP_IS04_mosek_result.mat
 Profile plot         : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\MILP\results\IS04\MILP_IS04_mosek_profiles.png

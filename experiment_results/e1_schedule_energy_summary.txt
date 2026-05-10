@@ -1,0 +1,47 @@
+Experiment schedule-energy summary
+Rule: min energy within +/- 1.0 s; fallback closest time
+
+Segment  | Exp  | Target(s)  | Config   | Time(s)     | Energy(kWh)   | Gap(s)     | Status                
+-------------------------------------------------------------------------------------------------------
+IS01     |      | 129.000    |          | NaN         | NaN           | NaN        | missing E1/E5 data    
+IS02     | E1   | 169.000    | C        | 149.830     | 27.895409     | -19.170    | closest to target     
+IS03     | E1   | 184.000    | A        | 184.750     | 25.445935     | 0.750      | within target window  
+IS04     | E5   | 177.000    | A        | 177.565     | 16.970397     | 0.565      | within target window  
+IS05     | E1   | 185.000    | C        | 185.906     | 23.024205     | 0.906      | within target window  
+IS06     | E1   | 219.000    | C        | 219.613     | 17.613415     | 0.613      | within target window  
+IS07     | E1   | 214.000    | A        | 214.777     | 22.975621     | 0.777      | within target window  
+IS08     | E1   | 329.000    | C        | 325.872     | 43.256158     | -3.128     | closest to target     
+
+All configs
+Segment  | Exp  | Config   | Best? | Time(s)     | Energy(kWh)   | Gap(s)     | Status                 | Description
+----------------------------------------------------------------------------------------------------------------------------------
+IS02     | E1   | A        |       | 145.884     | 22.436877     | -23.116    | closest to target      | Original CC_CR + Original NSGA-II
+IS02     | E1   | B        |       | 146.366     | 23.559261     | -22.634    | closest to target      | Original CC_CR + BRL-SDE-NSGA-II
+IS02     | E1   | C        | yes   | 149.830     | 27.895409     | -19.170    | closest to target      | Improved CC_CR + Original NSGA-II
+IS02     | E1   | D        |       | 139.066     | 23.663516     | -29.934    | closest to target      | Improved CC_CR + BRL-SDE-NSGA-II
+IS03     | E1   | A        | yes   | 184.750     | 25.445935     | 0.750      | within target window   | Original CC_CR + Original NSGA-II
+IS03     | E1   | B        |       | NaN         | NaN           | NaN        | missing                | Original CC_CR + BRL-SDE-NSGA-II
+IS03     | E1   | C        |       | NaN         | NaN           | NaN        | missing                | Improved CC_CR + Original NSGA-II
+IS03     | E1   | D        |       | 184.166     | 25.471344     | 0.166      | within target window   | Improved CC_CR + BRL-SDE-NSGA-II
+IS04     | E5   | A        | yes   | 177.565     | 16.970397     | 0.565      | within target window   | Original CC_CR + Original NSGA-II
+IS04     | E5   | B        |       | 178.293     | 17.173156     | 1.293      | closest to target      | Original CC_CR + BRL-SDE-NSGA-II
+IS04     | E5   | C        |       | 177.877     | 16.989577     | 0.877      | within target window   | Improved CC_CR + Original NSGA-II
+IS04     | E5   | D        |       | 177.910     | 17.003993     | 0.910      | within target window   | Improved CC_CR + BRL-SDE-NSGA-II
+IS04     | E5   | C_LLM    |       | 177.999     | 17.002382     | 0.999      | within target window   | Improved CC_CR + Original NSGA-II + LLM advisor
+IS04     | E5   | D_LLM    |       | 177.940     | 17.003496     | 0.940      | within target window   | Improved CC_CR + BRL-SDE-NSGA-II + LLM advisor
+IS05     | E1   | A        |       | 185.449     | 23.039343     | 0.449      | within target window   | Original CC_CR + Original NSGA-II
+IS05     | E1   | B        |       | 185.722     | 24.110668     | 0.722      | within target window   | Original CC_CR + BRL-SDE-NSGA-II
+IS05     | E1   | C        | yes   | 185.906     | 23.024205     | 0.906      | within target window   | Improved CC_CR + Original NSGA-II
+IS05     | E1   | D        |       | 185.850     | 23.027068     | 0.850      | within target window   | Improved CC_CR + BRL-SDE-NSGA-II
+IS06     | E1   | A        |       | 219.501     | 17.625087     | 0.501      | within target window   | Original CC_CR + Original NSGA-II
+IS06     | E1   | B        |       | 219.648     | 17.619710     | 0.648      | within target window   | Original CC_CR + BRL-SDE-NSGA-II
+IS06     | E1   | C        | yes   | 219.613     | 17.613415     | 0.613      | within target window   | Improved CC_CR + Original NSGA-II
+IS06     | E1   | D        |       | 219.983     | 17.629257     | 0.983      | within target window   | Improved CC_CR + BRL-SDE-NSGA-II
+IS07     | E1   | A        | yes   | 214.777     | 22.975621     | 0.777      | within target window   | Original CC_CR + Original NSGA-II
+IS07     | E1   | B        |       | 214.911     | 22.988341     | 0.911      | within target window   | Original CC_CR + BRL-SDE-NSGA-II
+IS07     | E1   | C        |       | 214.167     | 23.021834     | 0.167      | within target window   | Improved CC_CR + Original NSGA-II
+IS07     | E1   | D        |       | 214.848     | 22.996764     | 0.848      | within target window   | Improved CC_CR + BRL-SDE-NSGA-II
+IS08     | E1   | A        |       | 287.131     | 56.823981     | -41.869    | closest to target      | Original CC_CR + Original NSGA-II
+IS08     | E1   | B        |       | 384.409     | 42.501182     | 55.409     | closest to target      | Original CC_CR + BRL-SDE-NSGA-II
+IS08     | E1   | C        | yes   | 325.872     | 43.256158     | -3.128     | closest to target      | Improved CC_CR + Original NSGA-II
+IS08     | E1   | D        |       | 290.104     | 54.898981     | -38.896    | closest to target      | Improved CC_CR + BRL-SDE-NSGA-II

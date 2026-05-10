@@ -25,16 +25,23 @@ addpath(genpath(project_root));
 %   {'IS04'}            → satu intersection
 %   {'IS04','IS08'}     → beberapa intersection
 %   {'IS01','IS02','IS03','IS04','IS05','IS06','IS07','IS08'}  → semua manual
-SEGMENTS_TO_RUN = {'IS07'};
+SEGMENTS_TO_RUN = {'IS05', 'IS06', 'IS07', 'IS08'};
 ROUTE_DIRECTION = 'up';
 
 % --- Pilih eksperimen yang mau dijalankan ---
 RUN_BASELINE = true;    % hitung T_min dan E_baseline tiap segment
-RUN_E1       = true;    % Ablation Study       (4 config × 30 runs)
+RUN_E1       = false;    % Ablation Study       (4 config × 30 runs)
 RUN_E2       = false;   % Tight Time Sweep     (8 slack levels × 30 runs)
 RUN_E3       = false;   % Strong Benchmarking  (6 methods × 30 runs)
 RUN_E4       = false;   % Robustness           (30 runs × 18 scenarios)
-RUN_E5       = false;   % LLM Advisor Study    (A/B/C/D/C_LLM/D_LLM)
+RUN_E5       = true;   % LLM Advisor Study    (A/B/C/D/C_LLM/D_LLM)
+
+% --- Optional: pilih config E5 tertentu saja ---
+%   'all'          -> jalankan semua config E5
+%   {'D'}          -> hanya config D
+%   {'C','D'}      -> hanya config C dan D
+%   {'D_LLM'}      -> hanya config D_LLM
+E5_SELECTED_CONFIGS = {'D'};
 
 % --- Jumlah runs (turunkan untuk quick test) ---
 N_RUNS = 1;   % 5 = quick test, 10 = medium, 30 = full experiment
@@ -198,8 +205,10 @@ fprintf('============================================================\n');
 function keep_vars
 % Bersihkan workspace tapi pertahankan variabel kontrol orchestrator
     evalin('base', ['clearvars -except ' ...
+    'script_dir project_root ROUTE_DIRECTION ' ...
         'ALL_SEGMENTS SEGMENTS_TO_RUN RS_FILE rs_path ' ...
         'RUN_BASELINE RUN_E1 RUN_E2 RUN_E3 RUN_E4 RUN_E5 N_RUNS ' ...
+        'E5_SELECTED_CONFIGS ' ...
         'seg_k seg_name seg_idx ACTIVE_SEG ACTIVE_RS ACTIVE_NRUNS ' ...
         'OUT_DIR T_min_seg E_base_seg']);
 end

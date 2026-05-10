@@ -1,0 +1,95 @@
+[Warning: "c:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex" selected using the -sd startup option could not be accessed.
+Using "C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra" as the initial working folder instead.] 
+CVX already available on MATLAB path. Skipping cvx_setup refresh.
+CVX solver selection | mosek
+Loading rolling stock...
+
+============================================================
+Convex optimization | IS01
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS01_0.000-1.120km.mat
+Target time         | 129.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS01
+============================================================
+Status: Solved | T_actual=129.00 s | E=10.156 kWh | solve=69.37 s | process=69.40 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS01\CO_IS01_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS01\CO_IS01_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS01\CO_IS01_mosek_profiles.png
+
+============================================================
+Convex optimization | IS02
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS02_1.120-3.028km.mat
+Target time         | 169.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS02
+============================================================
+Status: Solved | T_actual=169.00 s | E=21.548 kWh | solve=135.93 s | process=135.93 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS02\CO_IS02_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS02\CO_IS02_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS02\CO_IS02_mosek_profiles.png
+
+============================================================
+Convex optimization | IS03
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS03_3.028-5.200km.mat
+Target time         | 184.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS03
+============================================================
+Status: Solved | T_actual=184.00 s | E=24.221 kWh | solve=131.43 s | process=131.44 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS03\CO_IS03_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS03\CO_IS03_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS03\CO_IS03_mosek_profiles.png
+
+============================================================
+Convex optimization | IS04
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS04_5.200-6.842km.mat
+Target time         | 177.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS04
+============================================================
+Status: Solved | T_actual=177.00 s | E=21.118 kWh | solve=108.56 s | process=108.56 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS04\CO_IS04_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS04\CO_IS04_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS04\CO_IS04_mosek_profiles.png
+
+============================================================
+Convex optimization | IS05
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS05_6.842-8.958km.mat
+Target time         | 185.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS05
+============================================================
+Status: Solved | T_actual=185.00 s | E=28.280 kWh | solve=151.99 s | process=152.00 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS05\CO_IS05_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS05\CO_IS05_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS05\CO_IS05_mosek_profiles.png
+
+============================================================
+Convex optimization | IS06
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS06_8.958-11.323km.mat
+Target time         | 219.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS06
+============================================================
+Status: Solved | T_actual=219.00 s | E=21.253 kWh | solve=163.06 s | process=163.06 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS06\CO_IS06_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS06\CO_IS06_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS06\CO_IS06_mosek_profiles.png
+
+============================================================
+Convex optimization | IS07
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS07_11.323-13.729km.mat
+Target time         | 214.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS07
+============================================================
+Status: Solved | T_actual=214.00 s | E=26.585 kWh | solve=162.20 s | process=162.20 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS07\CO_IS07_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS07\CO_IS07_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS07\CO_IS07_mosek_profiles.png
+
+============================================================
+Convex optimization | IS08
+Route file          | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\route\Guangxhou_line_7\up\Guangzhou_Line7_IS08_13.729-17.507km.mat
+Target time         | 329.00 s
+Results folder      | C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS08
+============================================================
+Status: Solved | T_actual=329.00 s | E=47.383 kWh | solve=241.10 s | process=241.10 s
+Saved result  : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS08\CO_IS08_mosek_result.mat
+Saved summary : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS08\CO_IS08_mosek_summary.txt
+Saved plot    : C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\IS08\CO_IS08_mosek_profiles.png
+
+Saved batch results: C:\Users\inshaallah_kaya\Baru\new_single_train_simulator_cakra\Convex Optimisation\results\CO_batch_results_mosek.mat

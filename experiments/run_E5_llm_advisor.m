@@ -46,7 +46,11 @@ POP_SIZE   = 300;
 ITERATIONS = 300;
 N_WORKERS  = 4;
 SEARCH_TLIM = T_TARGET * 1.50;
-AUTO_GENERATE_RESPONSE = false;  % false = stop after prompt, then place response JSON and rerun
+if ~exist('E5_AUTO_GENERATE_RESPONSE', 'var') || isempty(E5_AUTO_GENERATE_RESPONSE)
+    % When called from main_experiments, keep the workflow fully automatic.
+    E5_AUTO_GENERATE_RESPONSE = exist('ACTIVE_SEG', 'var') && ~isempty(ACTIVE_SEG);
+end
+AUTO_GENERATE_RESPONSE = logical(E5_AUTO_GENERATE_RESPONSE);
 
 REQUEST_FILE  = fullfile(OUT_DIR, 'E5_llm_request.json');
 PROMPT_FILE   = fullfile(OUT_DIR, 'E5_llm_prompt.txt');
@@ -63,6 +67,11 @@ CONFIGS = struct( ...
                        'Improved CC_CR + BRL-SDE-NSGA-II', ...
                        'Improved CC_CR + Original NSGA-II + LLM advisor', ...
                        'Improved CC_CR + BRL-SDE-NSGA-II + LLM advisor'} );
+
+if ~exist('E5_SELECTED_CONFIGS', 'var') || isempty(E5_SELECTED_CONFIGS)
+    E5_SELECTED_CONFIGS = 'all';
+end
+CONFIGS = select_e5_configs(CONFIGS, E5_SELECTED_CONFIGS);
 
 if ~exist(OUT_DIR, 'dir')
     mkdir(OUT_DIR);
@@ -290,6 +299,7 @@ meta = struct( ...
     'route_file', ROUTE_FILE, ...
     'route_direction', ROUTE_DIRECTION, ...
     'rs_file', RS_FILE, ...
+    'selected_config_ids', {string({CONFIGS.id})}, ...
     'response_file', RESPONSE_FILE);
 metrics_table = T_csv;
 save(fullfile(OUT_DIR, 'E5_all_configs.mat'), 'results', 'advisor_profile', 'advisor_request', 'meta', 'metrics_table');
@@ -313,19 +323,25 @@ end
 
 fprintf(fid, '\nWilcoxon signed-rank test (HV, paired seeds) — D_LLM vs others:\n');
 ref_idx = find(strcmp({CONFIGS.id}, 'D_LLM'), 1, 'first');
-for ci = 1:n_cfg
-    if ci == ref_idx
-        continue;
+if isempty(ref_idx)
+    fprintf(fid, '  Skipped: D_LLM is not part of the selected config subset.\n');
+elseif n_cfg < 2
+    fprintf(fid, '  Skipped: need at least 2 configs for pairwise comparison.\n');
+else
+    for ci = 1:n_cfg
+        if ci == ref_idx
+            continue;
+        end
+        x = hv_mat(ref_idx, :)';
+        y = hv_mat(ci, :)';
+        ok = ~isnan(x) & ~isnan(y);
+        if sum(ok) >= 5 && exist('signrank','file') == 2
+            p_val = signrank(x(ok), y(ok));
+        else
+            p_val = wilcoxon_srtest(x(ok), y(ok));
+        end
+        fprintf(fid, '  D_LLM vs %-6s : p = %.4f%s\n', CONFIGS(ci).id, p_val, ternary(p_val < 0.05, '  *', ''));
     end
-    x = hv_mat(ref_idx, :)';
-    y = hv_mat(ci, :)';
-    ok = ~isnan(x) & ~isnan(y);
-    if sum(ok) >= 5 && exist('signrank','file') == 2
-        p_val = signrank(x(ok), y(ok));
-    else
-        p_val = wilcoxon_srtest(x(ok), y(ok));
-    end
-    fprintf(fid, '  D_LLM vs %-6s : p = %.4f%s\n', CONFIGS(ci).id, p_val, ternary(p_val < 0.05, '  *', ''));
 end
 fclose(fid);
 
@@ -335,7 +351,8 @@ hv_stds  = std(hv_mat, 0, 2, 'omitnan');
 b = bar(hv_means, 0.65, 'FaceColor', 'flat');
 hold on;
 errorbar(1:n_cfg, hv_means, hv_stds, 'k.', 'LineWidth', 1.5, 'CapSize', 8);
-b.CData = [0.55 0.55 0.55; 0.20 0.45 0.85; 0.95 0.50 0.05; 0.08 0.78 0.18; 0.95 0.70 0.25; 0.15 0.55 0.15];
+palette = [0.55 0.55 0.55; 0.20 0.45 0.85; 0.95 0.50 0.05; 0.08 0.78 0.18; 0.95 0.70 0.25; 0.15 0.55 0.15];
+b.CData = palette(1:n_cfg, :);
 set(gca, 'XTick', 1:n_cfg, 'XTickLabel', {CONFIGS.id}, 'FontSize', 10);
 xlabel('Configuration');
 ylabel('Hypervolume (HV)');
@@ -415,6 +432,41 @@ function request = build_llm_advisor_request(seg_label, t_target, search_tlim)
         'For policy_type="downhill", output high_ratio and low1_ratio. ' ...
         'Do not output MID; it is already computed adaptively inside the simulator.'];
     request.sections = sections;
+end
+
+function configs = select_e5_configs(all_configs, selected_configs)
+    if ischar(selected_configs) || (isstring(selected_configs) && isscalar(selected_configs))
+        selected_configs = cellstr(string(selected_configs));
+    elseif isstring(selected_configs)
+        selected_configs = cellstr(selected_configs(:));
+    end
+
+    if ~iscell(selected_configs)
+        error('E5_SELECTED_CONFIGS must be ''all'', a char/string, or a cell array of config IDs.');
+    end
+
+    selected_configs = selected_configs(:)';
+    selected_configs = selected_configs(~cellfun(@isempty, selected_configs));
+    selected_configs = cellfun(@char, selected_configs, 'UniformOutput', false);
+
+    if isempty(selected_configs) || (numel(selected_configs) == 1 && strcmpi(selected_configs{1}, 'all'))
+        configs = all_configs;
+        return;
+    end
+
+    all_ids = {all_configs.id};
+    keep_idx = [];
+    for i = 1:numel(selected_configs)
+        idx = find(strcmpi(all_ids, strtrim(selected_configs{i})), 1, 'first');
+        if isempty(idx)
+            error('Unknown E5 config: %s. Valid IDs: %s', selected_configs{i}, strjoin(all_ids, ', '));
+        end
+        if ~ismember(idx, keep_idx)
+            keep_idx(end+1) = idx; %#ok<AGROW>
+        end
+    end
+
+    configs = all_configs(keep_idx);
 end
 
 function write_llm_advisor_files(request, request_file, prompt_file, response_file)

@@ -12,10 +12,10 @@
 % Notes:
 %   - Per-route CSV/PNG stay inside each route folder under results/.
 %   - Aggregate CSV is written to outputRoot.
-clear
+clearvars -except selected_results outputRoot showFigures selected_seeds enableParetoControls
 
 if ~exist('selected_results', 'var') || isempty(selected_results)
-    selected_results = {'IS06'};
+    selected_results = {'IS08'};
 end
 
 this_dir = fileparts(mfilename('fullpath'));
